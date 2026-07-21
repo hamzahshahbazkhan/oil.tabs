@@ -18,9 +18,15 @@ export async function apply(
           });
           break;
         case "create":
-          throw new Error("create not yet implemented");
+          await browser.tabs.create({
+            windowId: op.windowId,
+            url: op.url,
+            index: op.index,
+          });
+          break;
         case "navigate":
-          throw new Error("navigate not yet implemented");
+          await browser.tabs.update(op.tabId, { url: op.url });
+          break;
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);
@@ -28,9 +34,10 @@ export async function apply(
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      const tabId = op.kind === "create" ? "new" : String(op.tabId);
       return {
         ok: false,
-        error: `Failed to ${op.kind} tab ${op.tabId}: ${msg}`,
+        error: `Failed to ${op.kind} tab ${tabId}: ${msg}`,
       };
     }
   }
