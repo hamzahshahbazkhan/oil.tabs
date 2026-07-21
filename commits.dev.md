@@ -100,7 +100,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
   - Verify: `npm test` passes, including the new test.
   - Commit message: `feat(diff): emit create ops for new buffer lines`
 
-- [ ] **v0.3.3 — `diff()` emits `navigate` ops for changed URLs**
+- [x] **v0.3.3 — `diff()` emits `navigate` ops for changed URLs**
   - In `diff.ts`: for any tabId present in both old and new, if
     `parsed.url !== oldById.get(tabId).url`, emit a `navigate` op.
   - Add unit test: change a URL on an existing line → one `navigate` op with
@@ -415,4 +415,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 ```
 2026-07-22  af498d6  v0.3.1  Added create/navigate Operation variants; added stub cases in apply.ts to keep exhaustive switch compiling.
 2026-07-22  b4e4e75  v0.3.2  diff() emits create ops for parsed lines with tabId=null; index computed as per-window position in buffer.
+2026-07-22  2d97d70  v0.3.3  diff() emits navigate ops when a new URL differs from the snapshot line with the same tabId.
 ```
