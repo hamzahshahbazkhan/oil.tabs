@@ -11,7 +11,9 @@ export interface BufferLine {
 
 export type Operation =
   | { kind: "close"; tabId: number }
-  | { kind: "move"; tabId: number; windowId: number; index: number };
+  | { kind: "move"; tabId: number; windowId: number; index: number }
+  | { kind: "create"; url: string; windowId: number; index: number }
+  | { kind: "navigate"; tabId: number; url: string };
 
 export interface Snapshot {
   takenAt: number;

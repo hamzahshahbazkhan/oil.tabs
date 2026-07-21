@@ -17,6 +17,10 @@ export async function apply(
             index: op.index,
           });
           break;
+        case "create":
+          throw new Error("create not yet implemented");
+        case "navigate":
+          throw new Error("navigate not yet implemented");
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);
