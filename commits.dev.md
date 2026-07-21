@@ -91,7 +91,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     these yet, this is just the type addition).
   - Commit message: `feat(types): add create and navigate operation kinds`
 
-- [ ] **v0.3.2 — `diff()` emits `create` ops for new lines**
+- [x] **v0.3.2 — `diff()` emits `create` ops for new lines**
   - In `src/background/diff.ts`: any `ParsedLine` with `tabId === null`
     produces a `create` op using its `windowId` and its position in the
     buffer as `index`.
@@ -414,4 +414,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 
 ```
 2026-07-22  af498d6  v0.3.1  Added create/navigate Operation variants; added stub cases in apply.ts to keep exhaustive switch compiling.
+2026-07-22  b4e4e75  v0.3.2  diff() emits create ops for parsed lines with tabId=null; index computed as per-window position in buffer.
 ```
