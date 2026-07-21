@@ -104,7 +104,17 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  return [...closeOps, ...moveOps, ...createOps];
+  const navigateOps: Operation[] = [];
+  for (const line of parsed) {
+    if (line.tabId !== null) {
+      const oldLine = oldById.get(line.tabId);
+      if (oldLine && oldLine.url !== line.url) {
+        navigateOps.push({ kind: "navigate", tabId: line.tabId, url: line.url });
+      }
+    }
+  }
+
+  return [...closeOps, ...moveOps, ...createOps, ...navigateOps];
 }
 
 function computeLCS(a: number[], b: number[]): number[] {

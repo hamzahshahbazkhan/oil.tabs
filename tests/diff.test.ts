@@ -18,11 +18,11 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number }[
   };
 }
 
-function makeParsed(lines: { tabId: number | null; windowId: number }[]): ParsedLine[] {
+function makeParsed(lines: { tabId: number | null; windowId: number; url?: string }[]): ParsedLine[] {
   return lines.map((l) => ({
     tabId: l.tabId,
     windowId: l.windowId,
-    url: "https://example.com/",
+    url: l.url ?? "https://example.com/",
   }));
 }
 
@@ -115,6 +115,49 @@ describe("diff", () => {
     expect(createOps).toHaveLength(2);
     expect(createOps[0]).toEqual({ kind: "create", url: "https://example.com/", windowId: 1, index: 1 });
     expect(createOps[1]).toEqual({ kind: "create", url: "https://example.com/", windowId: 2, index: 0 });
+  });
+
+  it("same tabId with same url produces no navigate op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1 }]);
+    const ops = diff(old, parsed);
+    expect(ops.filter((op) => op.kind === "navigate")).toHaveLength(0);
+  });
+
+  it("same tabId with different url produces one navigate op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, url: "https://other.com/" }]);
+    const ops = diff(old, parsed);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toEqual({ kind: "navigate", tabId: 1, url: "https://other.com/" });
+  });
+
+  it("url changed only for one tab in multi-line buffer produces only one navigate op", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+    ]);
+    const parsed = makeParsed([
+      { tabId: 1, windowId: 1, url: "https://changed.com/" },
+      { tabId: 2, windowId: 1 },
+    ]);
+    const ops = diff(old, parsed);
+    const navigateOps = ops.filter((op) => op.kind === "navigate");
+    expect(navigateOps).toHaveLength(1);
+    expect(navigateOps[0]).toEqual({ kind: "navigate", tabId: 1, url: "https://changed.com/" });
+  });
+
+  it("navigate ops are placed after create ops in result", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([
+      { tabId: 1, windowId: 1, url: "https://changed.com/" },
+      { tabId: null, windowId: 1 },
+    ]);
+    const ops = diff(old, parsed);
+    const kinds = ops.map((op) => op.kind);
+    const createIdx = kinds.indexOf("create");
+    const navigateIdx = kinds.indexOf("navigate");
+    expect(createIdx).toBeLessThan(navigateIdx);
   });
 
   it("create ops are placed after close and move in result", () => {
