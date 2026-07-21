@@ -117,7 +117,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
   - Verify: `npm test` passes.
   - Commit message: `feat(diff): enforce close-move-create-navigate op ordering`
 
-- [ ] **v0.3.5 — `apply()` executes `create` and `navigate`**
+- [x] **v0.3.5 — `apply()` executes `create` and `navigate`**
   - In `src/background/apply.ts`: add switch cases —
     `create` → `await browser.tabs.create({url, windowId, index})`;
     `navigate` → `await browser.tabs.update(tabId, {url})`.
@@ -417,4 +417,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  b4e4e75  v0.3.2  diff() emits create ops for parsed lines with tabId=null; index computed as per-window position in buffer.
 2026-07-22  2d97d70  v0.3.3  diff() emits navigate ops when a new URL differs from the snapshot line with the same tabId.
 2026-07-22  e015399  v0.3.4  Already implemented close→move→create→navigate ordering in diff() as part of v0.3.2/3.
+2026-07-22  aa33f28  v0.3.5  Replaced create/navigate stubs in apply() with real browser.tabs.create/update calls; added apply tests.
 ```
