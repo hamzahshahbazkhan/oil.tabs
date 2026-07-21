@@ -103,14 +103,38 @@ describe("diff", () => {
     expect(moveOps.length).toBeLessThan(4);
   });
 
-  it("null tabIds in parsed are ignored (no create ops emitted)", () => {
+  it("null tabIds produce create ops with correct windowId and index", () => {
     const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
     const parsed = makeParsed([
       { tabId: 1, windowId: 1 },
       { tabId: null, windowId: 1 },
-      { tabId: null, windowId: 1 },
+      { tabId: null, windowId: 2 },
     ]);
     const ops = diff(old, parsed);
-    expect(ops).toEqual([]);
+    const createOps = ops.filter((op) => op.kind === "create");
+    expect(createOps).toHaveLength(2);
+    expect(createOps[0]).toEqual({ kind: "create", url: "https://example.com/", windowId: 1, index: 1 });
+    expect(createOps[1]).toEqual({ kind: "create", url: "https://example.com/", windowId: 2, index: 0 });
+  });
+
+  it("create ops are placed after close and move in result", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+      { tabId: 3, windowId: 1, index: 2 },
+    ]);
+    // close tab 1, move tab 3 to front, create new tab between
+    const parsed = makeParsed([
+      { tabId: 3, windowId: 1 },
+      { tabId: null, windowId: 1 },
+      { tabId: 2, windowId: 1 },
+    ]);
+    const ops = diff(old, parsed);
+    const kinds = ops.map((op) => op.kind);
+    const closeIdx = kinds.indexOf("close");
+    const createIdx = kinds.indexOf("create");
+    const moveIdx = kinds.indexOf("move");
+    expect(closeIdx).toBeLessThan(moveIdx);
+    expect(moveIdx).toBeLessThan(createIdx);
   });
 });

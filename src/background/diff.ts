@@ -24,6 +24,16 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
 
   const closedIds = new Set(closeOps.map((op) => op.tabId));
 
+  const createOps: Operation[] = [];
+  const perWindowPos = new Map<number, number>();
+  for (const line of parsed) {
+    const pos = perWindowPos.get(line.windowId) ?? 0;
+    if (line.tabId === null) {
+      createOps.push({ kind: "create", url: line.url, windowId: line.windowId, index: pos });
+    }
+    perWindowPos.set(line.windowId, pos + 1);
+  }
+
   const newOrder = new Map<number, number[]>();
   for (const line of parsed) {
     if (line.tabId !== null && !closedIds.has(line.tabId)) {
@@ -94,7 +104,7 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  return [...closeOps, ...moveOps];
+  return [...closeOps, ...moveOps, ...createOps];
 }
 
 function computeLCS(a: number[], b: number[]): number[] {
