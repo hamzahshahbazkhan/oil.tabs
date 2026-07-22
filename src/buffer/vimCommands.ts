@@ -96,6 +96,14 @@ export function setupVimCommands(
   Vim.mapCommand("J", "action", "moveLineDown");
   Vim.mapCommand("K", "action", "moveLineUp");
 
+  Vim.defineEx("cnext", "cn", () => {
+    chrome.runtime.sendMessage({ type: "CYCLE_NEXT" });
+  });
+
+  Vim.defineEx("cprev", "cp", () => {
+    chrome.runtime.sendMessage({ type: "CYCLE_PREV" });
+  });
+
   Vim.defineEx("sleep", "sl", () => {
     const sel = view.state.selection.main;
     const fromLine = view.state.doc.lineAt(sel.from);

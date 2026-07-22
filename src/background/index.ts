@@ -27,6 +27,46 @@ async function loadSavedItems(): Promise<SavedItem[]> {
   return (savedForLater ?? []) as SavedItem[];
 }
 
+const MRU_MAX = 50;
+
+async function updateMRU(tabId: number): Promise<void> {
+  const { mruTabIds } = await browser.storage.local.get("mruTabIds");
+  let list: number[] = mruTabIds ?? [];
+  list = list.filter((id) => id !== tabId);
+  list.unshift(tabId);
+  if (list.length > MRU_MAX) list = list.slice(0, MRU_MAX);
+  await browser.storage.local.set({ mruTabIds: list });
+}
+
+async function cycleTab(dir: "next" | "prev"): Promise<void> {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const currentId = tabs[0]?.id;
+  if (currentId === undefined) return;
+
+  const { mruTabIds } = await browser.storage.local.get("mruTabIds");
+  const list: number[] = mruTabIds ?? [];
+  const idx = list.indexOf(currentId);
+  if (idx === -1) return;
+
+  const step = dir === "next" ? -1 : 1;
+  let targetIdx = (idx + step + list.length) % list.length;
+  let attempts = 0;
+  while (attempts < list.length) {
+    const targetId = list[targetIdx];
+    if (targetId !== currentId) {
+      try {
+        await browser.tabs.update(targetId, { active: true });
+        return;
+      } catch {
+        list.splice(targetIdx, 1);
+        if (targetIdx <= idx) break;
+      }
+    }
+    targetIdx = (targetIdx + step + list.length) % list.length;
+    attempts++;
+  }
+}
+
 async function focusOrOpen(url: string): Promise<void> {
   const tabs = await browser.tabs.query({ url });
   if (tabs.length > 0) {
@@ -50,6 +90,9 @@ async function sendStaleWarning(): Promise<void> {
   }
 }
 
+browser.tabs.onActivated.addListener((info) => {
+  updateMRU(info.tabId);
+});
 browser.tabs.onRemoved.addListener(() => { sendStaleWarning(); });
 browser.tabs.onCreated.addListener(() => { sendStaleWarning(); });
 browser.tabs.onMoved.addListener(() => { sendStaleWarning(); });
@@ -69,9 +112,12 @@ browser.commands.onCommand.addListener(async (command) => {
   if (match) {
     const idx = Number(match[1]);
     const { globalShortcuts } = await browser.storage.sync.get("globalShortcuts");
-    const shortcuts: { key: string; url: string }[] = globalShortcuts ?? [];
-    if (idx < shortcuts.length && shortcuts[idx].url) {
-      await focusOrOpen(shortcuts[idx].url);
+    const shortcuts: { key: string; action: string; url: string }[] = globalShortcuts ?? [];
+    if (idx < shortcuts.length) {
+      const s = shortcuts[idx];
+      if (s.action === "cycleNext") await cycleTab("next");
+      else if (s.action === "cyclePrev") await cycleTab("prev");
+      else if (s.url) await focusOrOpen(s.url);
     }
   }
 });
@@ -167,6 +213,14 @@ browser.runtime.onMessage.addListener(
         }
         break;
       }
+
+      case "CYCLE_NEXT":
+        await cycleTab("next");
+        break;
+
+      case "CYCLE_PREV":
+        await cycleTab("prev");
+        break;
     }
   },
 );

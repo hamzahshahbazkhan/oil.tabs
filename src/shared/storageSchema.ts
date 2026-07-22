@@ -9,8 +9,14 @@ export interface SavedItem {
   savedAt: number;
 }
 
+export interface GlobalShortcut {
+  key: string;
+  action: "focusOrOpen" | "cycleNext" | "cyclePrev";
+  url: string;
+}
+
 export interface UserSettings {
-  globalShortcuts: { key: string; url: string }[];
+  globalShortcuts: GlobalShortcut[];
   largeDiffConfirmThreshold: number;
 }
 
