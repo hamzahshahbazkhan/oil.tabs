@@ -12,6 +12,8 @@ Press **Ctrl+Shift+E** to open the tab-oil buffer.
 
 **Permissions:** `tabs`, `storage`, `clipboardWrite`, `tabGroups`, `bookmarks` (for future folders/saved-tabs features).
 
+**Firefox:** Most features work (`tabGroups` and `discard` are Chrome-only and gracefully skipped). Load unpacked via `about:debugging`.
+
 ## What it supports
 
 - **View all tabs** across all windows, grouped by window, one line per tab

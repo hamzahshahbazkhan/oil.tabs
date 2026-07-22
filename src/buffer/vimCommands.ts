@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
 import { Vim } from "@replit/codemirror-vim";
 import { idMap, nonEditableLines } from "./bufferState";
@@ -23,7 +24,7 @@ export function setupVimCommands(
   Vim.mapCommand("gx", "action", "focusTab");
 
   Vim.defineAction("refresh", () => {
-    chrome.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+    browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
   });
 
   Vim.mapCommand("gr", "action", "refresh");
@@ -97,11 +98,11 @@ export function setupVimCommands(
   Vim.mapCommand("K", "action", "moveLineUp");
 
   Vim.defineEx("cnext", "cn", () => {
-    chrome.runtime.sendMessage({ type: "CYCLE_NEXT" });
+    browser.runtime.sendMessage({ type: "CYCLE_NEXT" });
   });
 
   Vim.defineEx("cprev", "cp", () => {
-    chrome.runtime.sendMessage({ type: "CYCLE_PREV" });
+    browser.runtime.sendMessage({ type: "CYCLE_PREV" });
   });
 
   Vim.defineEx("sleep", "sl", () => {
@@ -115,7 +116,7 @@ export function setupVimCommands(
       if (tabId !== undefined) tabIds.push(tabId);
     }
     if (tabIds.length > 0) {
-      chrome.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });
+      browser.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });
     }
   });
 }

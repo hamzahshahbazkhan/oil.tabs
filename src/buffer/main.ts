@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import { EditorView, basicSetup } from "codemirror";
 import { vim } from "@replit/codemirror-vim";
 import { snapshotToText, parse } from "./serialize";
@@ -85,11 +86,11 @@ function save(force: boolean) {
     if (!ok) return;
   }
 
-  chrome.runtime.sendMessage({ type: "SAVE", text });
+  browser.runtime.sendMessage({ type: "SAVE", text });
 }
 
 function focusTab(tabId: number) {
-  chrome.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
+  browser.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
 }
 
 function init() {
@@ -119,7 +120,7 @@ function init() {
 
     setupVimCommands(view, save, focusTab);
 
-    chrome.runtime.onMessage.addListener((message: BgToBuffer) => {
+    browser.runtime.onMessage.addListener((message: BgToBuffer) => {
       switch (message.type) {
         case "SNAPSHOT":
           hideStaleBanner();
@@ -141,7 +142,7 @@ function init() {
       }
     });
 
-    chrome.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+    browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
   } catch (e) {
     console.error("tab-oil init error:", e);
     document.body.textContent = `tab-oil init error: ${e}`;

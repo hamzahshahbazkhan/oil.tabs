@@ -1,3 +1,5 @@
+import browser from "webextension-polyfill";
+
 interface ShortcutRow {
   key: string;
   action: "focusOrOpen" | "cycleNext" | "cyclePrev";
@@ -65,12 +67,12 @@ function renderRows(rows: ShortcutRow[], tbody: HTMLElement): void {
 }
 
 async function loadRows(): Promise<ShortcutRow[]> {
-  const { globalShortcuts } = await chrome.storage.sync.get("globalShortcuts");
+  const { globalShortcuts } = await browser.storage.sync.get("globalShortcuts");
   return (globalShortcuts ?? []) as ShortcutRow[];
 }
 
 async function saveRows(rows: ShortcutRow[]): Promise<void> {
-  await chrome.storage.sync.set({ globalShortcuts: rows });
+  await browser.storage.sync.set({ globalShortcuts: rows });
 }
 
 async function init(): Promise<void> {

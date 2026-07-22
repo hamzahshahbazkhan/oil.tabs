@@ -2,6 +2,10 @@
 import browser from "webextension-polyfill";
 import type { Operation } from "../shared/types";
 
+const hasTabGroups = typeof (browser.tabs as any).group === "function";
+const hasDiscard = typeof (browser.tabs as any).discard === "function";
+const hasBookmarks = typeof (browser as any).bookmarks?.create === "function";
+
 export async function apply(
   ops: Operation[],
 ): Promise<{ ok: boolean; error?: string }> {
@@ -28,6 +32,7 @@ export async function apply(
           await browser.tabs.update(op.tabId, { url: op.url });
           break;
         case "group": {
+          if (!hasTabGroups) break;
           if (op.groupId === "NONE") {
             await browser.tabs.group({ tabIds: [op.tabId], groupId: -1 });
           } else if (op.groupId === "NEW") {
@@ -49,6 +54,7 @@ export async function apply(
           break;
         }
         case "discard":
+          if (!hasDiscard) break;
           await browser.tabs.discard(op.tabId);
           break;
         case "saveForLater": {
@@ -62,6 +68,7 @@ export async function apply(
           break;
         }
         case "bookmark":
+          if (!hasBookmarks) break;
           await browser.bookmarks.create({ title: op.title, url: op.url });
           await browser.tabs.remove(op.tabId);
           break;

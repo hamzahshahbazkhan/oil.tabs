@@ -349,7 +349,7 @@ below are self-contained enough to proceed without it.)_
     actions, confirm traversal follows actual recency order, not tab-strip order.
   - Commit message: `feat(cycling): add MRU-based tab cycling with folder filter`
 
-- [ ] **v0.6.7 — Integration pass**
+- [x] **v0.6.7 — Integration pass**
   - Open the buffer with folders, saved items, groups, and regular tabs all
     present simultaneously. Simplify rendering if visually cluttered (e.g.
     collapse empty folders/groups).
@@ -439,4 +439,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  8ab7c48  feat  v0.6.4 Added saveForLater/bookmark/restoreFromSaved to Operation; saved field to ParsedLine; snapshotToText renders a "── Saved For Later" section; parse detects saved section; diff emits saveForLater/restoreFromSaved ops; apply handles all three; saved items threaded through snapshot pipeline; 4 new diff tests, 2 new apply tests, 1 new serialize test.
 2026-07-22  a51c4eb  feat  v0.6.5 Added options_page to manifest; options.html with table UI for configuring up to 5 global keyboard shortcuts; src/options/main.ts manages sync-stored shortcuts; background focusOrOpen queries tabs by URL and focuses or creates; 5 shortcut-0..4 commands registered in manifest for user assignment.
 2026-07-22  ed7e5c8  feat  v0.6.6 MRU tabId array maintained via tabs.onActivated listener, capped at 50, persisted to storage.local; cycleTab function (next/prev) in background; CYCLE_NEXT/CYCLE_PREV message types; :cnext/:cprev buffer Ex commands; options page extended with cycleNext/cyclePrev action types; GlobalShortcut type added to storageSchema.
+2026-07-22  a272a2d  fix  v0.6.7 Integration pass: fixed restoreFromSaved to only fire for new lines (tabId===null); added test for existing-tab-id exclusion; all rendering paths verified.
 ```
