@@ -192,7 +192,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     confirm the URL is there.
   - Commit message: `feat(buffer): copy url to system clipboard on yank`
 
-- [ ] **v0.4.4 — Live-state watchers + stale warning**
+- [x] **v0.4.4 — Live-state watchers + stale warning**
   - In background `index.ts`, add listeners for `browser.tabs.onRemoved`,
     `onCreated`, `onMoved`, `onUpdated`. If the buffer tab is currently open,
     post `{type:'STALE_WARNING'}` to it (do not auto-refresh — that would
@@ -423,4 +423,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  f70a725  v0.4.1  Added gx mapping to focus tab under cursor; created bufferState.ts shared idMap; background FOCUS_TAB now also focuses the window.
 2026-07-22  f9c8a95  v0.4.2  Added gr mapping that sends REQUEST_SNAPSHOT; existing SNAPSHOT handler replaces buffer, discarding edits.
 2026-07-22  79fc0e3  v0.4.3  Added clipboardWrite permission; mapped yy to action that extracts URL via extractUrl() and calls navigator.clipboard.writeText().
+2026-07-22  1a1c554  v0.4.4  Added tab event listeners in background that send STALE_WARNING to buffer tab; buffer shows/hides a non-blocking banner.
 ```
