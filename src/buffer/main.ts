@@ -20,7 +20,7 @@ function updateStatusBar() {
   const text = view.state.doc.toString();
   const parsed = parse(text, lastUrlMap);
   const ops = diff(lastSnapshot, parsed);
-  const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0 };
+  const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0 };
   for (const op of ops) {
     counts[op.kind]++;
   }
@@ -29,6 +29,7 @@ function updateStatusBar() {
   if (counts.create) parts.push(`${counts.create} to create`);
   if (counts.move) parts.push(`${counts.move} to move`);
   if (counts.navigate) parts.push(`${counts.navigate} to navigate`);
+  if (counts.group) parts.push(`${counts.group} to group`);
   const el = document.getElementById("statusbar");
   if (el) {
     el.textContent = parts.length ? parts.join(" · ") : "";

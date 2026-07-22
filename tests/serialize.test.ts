@@ -5,10 +5,10 @@ import type { Snapshot } from "../src/shared/types";
 const fixture: Snapshot = {
   takenAt: 1000,
   lines: [
-    { tabId: 1, windowId: 1, index: 0, url: "https://example.com/", title: "Example Domain", pinned: false, discarded: false, editable: true },
-    { tabId: 2, windowId: 1, index: 1, url: "https://github.com/", title: "GitHub", pinned: false, discarded: false, editable: true },
-    { tabId: 3, windowId: 2, index: 0, url: "https://news.ycombinator.com/", title: "Hacker News", pinned: false, discarded: false, editable: true },
-    { tabId: 4, windowId: 2, index: 1, url: "https://mail.google.com/", title: "Gmail", pinned: false, discarded: false, editable: true },
+    { tabId: 1, windowId: 1, index: 0, url: "https://example.com/", title: "Example Domain", pinned: false, discarded: false, editable: true, groupId: null },
+    { tabId: 2, windowId: 1, index: 1, url: "https://github.com/", title: "GitHub", pinned: false, discarded: false, editable: true, groupId: null },
+    { tabId: 3, windowId: 2, index: 0, url: "https://news.ycombinator.com/", title: "Hacker News", pinned: false, discarded: false, editable: true, groupId: null },
+    { tabId: 4, windowId: 2, index: 1, url: "https://mail.google.com/", title: "Gmail", pinned: false, discarded: false, editable: true, groupId: null },
   ],
 };
 
@@ -38,7 +38,7 @@ describe("snapshotToText", () => {
     const single: Snapshot = {
       takenAt: 0,
       lines: [
-        { tabId: 1, windowId: 1, index: 0, url: "https://a.com/", title: "A", pinned: false, discarded: false, editable: true },
+        { tabId: 1, windowId: 1, index: 0, url: "https://a.com/", title: "A", pinned: false, discarded: false, editable: true, groupId: null },
       ],
     };
     const { text } = snapshotToText(single);

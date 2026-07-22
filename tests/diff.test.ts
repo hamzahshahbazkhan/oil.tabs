@@ -14,6 +14,7 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number }[
       pinned: false,
       discarded: false,
       editable: true,
+      groupId: null,
     })),
   };
 }

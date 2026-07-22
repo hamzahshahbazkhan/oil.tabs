@@ -7,13 +7,15 @@ export interface BufferLine {
   pinned: boolean;
   discarded: boolean;
   editable: boolean;
+  groupId: number | null;
 }
 
 export type Operation =
   | { kind: "close"; tabId: number }
   | { kind: "move"; tabId: number; windowId: number; index: number }
   | { kind: "create"; url: string; windowId: number; index: number }
-  | { kind: "navigate"; tabId: number; url: string };
+  | { kind: "navigate"; tabId: number; url: string }
+  | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" };
 
 export interface Snapshot {
   takenAt: number;

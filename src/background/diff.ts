@@ -22,7 +22,7 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  const closedIds = new Set(closeOps.map((op) => op.tabId));
+  const closedIds = new Set(closeOps.filter((op): op is { kind: "close"; tabId: number } => op.kind === "close").map((op) => op.tabId));
 
   const createOps: Operation[] = [];
   const perWindowPos = new Map<number, number>();
@@ -87,7 +87,7 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
 
     // Filter out cross-window moved tabs from LCS computation
     const crossWindowMoved = new Set(
-      moveOps.filter((op) => op.kind === "move" && oldWindowOf.get(op.tabId) === windowId).map((op) => op.tabId)
+      moveOps.filter((op): op is { kind: "move"; tabId: number; windowId: number; index: number } => op.kind === "move" && oldWindowOf.get(op.tabId) === windowId).map((op) => op.tabId)
     );
 
     const oldFiltered = oldArr.filter((id) => !crossWindowMoved.has(id));
