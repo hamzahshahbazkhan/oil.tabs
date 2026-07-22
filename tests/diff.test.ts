@@ -19,13 +19,14 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number; p
   };
 }
 
-function makeParsed(lines: { tabId: number | null; windowId: number; url?: string; groupId?: number | null; folderId?: number | null }[]): ParsedLine[] {
+function makeParsed(lines: { tabId: number | null; windowId: number; url?: string; groupId?: number | null; folderId?: number | null; saved?: boolean }[]): ParsedLine[] {
   return lines.map((l) => ({
     tabId: l.tabId,
     windowId: l.windowId,
     url: l.url ?? "https://example.com/",
     groupId: l.groupId ?? null,
     folderId: l.folderId ?? null,
+    saved: l.saved ?? false,
   }));
 }
 
@@ -243,6 +244,50 @@ describe("diff", () => {
     const ops = diff(old, parsed);
     const folderOps = ops.filter((op) => op.kind === "assignFolder");
     expect(folderOps).toHaveLength(0);
+  });
+
+  it("line in saved section with tabId produces saveForLater op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, saved: true }]);
+    const ops = diff(old, parsed);
+    const saveOps = ops.filter((op) => op.kind === "saveForLater");
+    expect(saveOps).toHaveLength(1);
+    expect(saveOps[0]).toEqual({ kind: "saveForLater", tabId: 1, url: "https://example.com/", title: "Example" });
+    const closeOps = ops.filter((op) => op.kind === "close");
+    expect(closeOps).toHaveLength(0);
+  });
+
+  it("line in saved section without tabId produces saveForLater op with tabId 0", () => {
+    const old = makeSnapshot([]);
+    const parsed = makeParsed([{ tabId: null, windowId: 0, url: "https://saved.com/", saved: true }]);
+    const ops = diff(old, parsed);
+    const saveOps = ops.filter((op) => op.kind === "saveForLater");
+    expect(saveOps).toHaveLength(1);
+    expect(saveOps[0]).toEqual({ kind: "saveForLater", tabId: 0, url: "https://saved.com/", title: "" });
+  });
+
+  it("live line matching saved URL produces restoreFromSaved op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, url: "https://saved.com/" }]);
+    const savedUrls = new Set(["https://saved.com/"]);
+    const ops = diff(old, parsed, undefined, savedUrls);
+    const restoreOps = ops.filter((op) => op.kind === "restoreFromSaved");
+    expect(restoreOps).toHaveLength(1);
+    expect(restoreOps[0]).toEqual({ kind: "restoreFromSaved", url: "https://saved.com/", title: "", windowId: 1, index: 0 });
+  });
+
+  it("saved section tabIds are not counted as closeOps", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+    ]);
+    const parsed = makeParsed([
+      { tabId: 1, windowId: 1, saved: true },
+    ]);
+    const ops = diff(old, parsed);
+    const closeOps = ops.filter((op) => op.kind === "close");
+    expect(closeOps).toHaveLength(1);
+    expect(closeOps[0]).toEqual({ kind: "close", tabId: 2 });
   });
 
   it("removing folderId produces assignFolder op with null", () => {

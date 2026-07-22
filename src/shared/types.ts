@@ -17,7 +17,10 @@ export type Operation =
   | { kind: "navigate"; tabId: number; url: string }
   | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" }
   | { kind: "assignFolder"; tabId: number; folderId: number | null }
-  | { kind: "discard"; tabId: number };
+  | { kind: "discard"; tabId: number }
+  | { kind: "saveForLater"; tabId: number; url: string; title: string }
+  | { kind: "bookmark"; tabId: number; url: string; title: string }
+  | { kind: "restoreFromSaved"; url: string; title: string; windowId: number; index: number };
 
 export interface Snapshot {
   takenAt: number;
@@ -30,4 +33,5 @@ export interface ParsedLine {
   url: string;
   groupId: number | null;
   folderId: number | null;
+  saved: boolean;
 }

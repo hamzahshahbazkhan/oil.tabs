@@ -3,6 +3,7 @@ import { openOrFocusBufferTab, getBufferTabId } from "./bufferWindow";
 import { takeSnapshot } from "./snapshot";
 import type { Snapshot } from "../shared/types";
 import type { BgToBuffer, BufferToBg } from "../shared/messages";
+import type { SavedItem } from "../shared/storageSchema";
 import { snapshotToText, parse } from "../buffer/serialize";
 import { diff } from "./diff";
 import { apply } from "./apply";
@@ -11,6 +12,7 @@ let lastSnapshot: Snapshot | null = null;
 let currentUrlMap: Map<string, number> | null = null;
 let lastFolders: { id: number; name: string }[] = [];
 let lastTabFolderMap: Record<number, number> = {};
+let lastSavedItems: SavedItem[] = [];
 
 async function loadFolderData(): Promise<{ folders: { id: number; name: string }[]; tabFolderMap: Record<number, number> }> {
   const { folders, tabFolderMap } = await browser.storage.local.get(["folders", "tabFolderMap"]);
@@ -18,6 +20,11 @@ async function loadFolderData(): Promise<{ folders: { id: number; name: string }
     folders: (folders ?? []) as { id: number; name: string }[],
     tabFolderMap: (tabFolderMap ?? {}) as Record<number, number>,
   };
+}
+
+async function loadSavedItems(): Promise<SavedItem[]> {
+  const { savedForLater } = await browser.storage.local.get("savedForLater");
+  return (savedForLater ?? []) as SavedItem[];
 }
 
 async function sendStaleWarning(): Promise<void> {
@@ -56,7 +63,8 @@ browser.runtime.onMessage.addListener(
         const folderData = await loadFolderData();
         lastFolders = folderData.folders;
         lastTabFolderMap = folderData.tabFolderMap;
-        const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap };
+        lastSavedItems = await loadSavedItems();
+        const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap, savedItems: lastSavedItems };
         try {
           await browser.tabs.sendMessage(sender.tab!.id!, response);
         } catch {
@@ -74,7 +82,7 @@ browser.runtime.onMessage.addListener(
         }
 
         const parsed = parse(message.text, currentUrlMap);
-        const { folders: storedFolders, tabFolderMap: storedTabFolderMap } = await browser.storage.local.get(["folders", "tabFolderMap"]);
+        const { folders: storedFolders, tabFolderMap: storedTabFolderMap, savedForLater } = await browser.storage.local.get(["folders", "tabFolderMap", "savedForLater"]);
         const folderMap = new Map<number, number | null>();
         if (storedTabFolderMap) {
           for (const [key, val] of Object.entries(storedTabFolderMap as Record<string, number>)) {
@@ -86,7 +94,9 @@ browser.runtime.onMessage.addListener(
             folderMap.set(line.tabId, null);
           }
         }
-        const ops = diff(lastSnapshot, parsed, folderMap);
+        const currentSaved = (savedForLater ?? []) as SavedItem[];
+        const savedUrls = new Set(currentSaved.map((item: SavedItem) => item.url));
+        const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
         const result = await apply(ops);
         const freshSnapshot = await takeSnapshot();
         const { urlMap: freshUrlMap } = snapshotToText(freshSnapshot);
@@ -95,6 +105,7 @@ browser.runtime.onMessage.addListener(
         const freshFolderData = await loadFolderData();
         lastFolders = freshFolderData.folders;
         lastTabFolderMap = freshFolderData.tabFolderMap;
+        lastSavedItems = await loadSavedItems();
 
         const response: BgToBuffer = {
           type: "APPLY_RESULT",
@@ -103,6 +114,7 @@ browser.runtime.onMessage.addListener(
           snapshot: freshSnapshot,
           folders: freshFolderData.folders,
           tabFolderMap: freshFolderData.tabFolderMap,
+          savedItems: lastSavedItems,
         };
         try {
           await browser.tabs.sendMessage(sender.tab!.id!, response);

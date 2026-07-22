@@ -91,6 +91,31 @@ describe("apply", () => {
     expect(mockTabsDiscard).toHaveBeenCalledWith(42);
   });
 
+  it("saveForLater op adds to storage and closes tab", async () => {
+    mockStorageGet.mockResolvedValueOnce({});
+    const ops: Operation[] = [
+      { kind: "saveForLater", tabId: 5, url: "https://save.com/", title: "Save Me" },
+    ];
+    const result = await apply(ops);
+    expect(result).toEqual({ ok: true });
+    expect(mockStorageSet).toHaveBeenCalled();
+    expect(mockTabsRemove).toHaveBeenCalledWith(5);
+    const setCall = mockStorageSet.mock.calls[0][0];
+    expect(setCall.savedForLater).toHaveLength(1);
+    expect(setCall.savedForLater[0].url).toBe("https://save.com/");
+  });
+
+  it("restoreFromSaved op creates tab and removes from storage", async () => {
+    mockStorageGet.mockResolvedValueOnce({ savedForLater: [{ url: "https://restore.com/", title: "Restore Me", savedAt: 100 }] });
+    const ops: Operation[] = [
+      { kind: "restoreFromSaved", url: "https://restore.com/", title: "Restore Me", windowId: 1, index: 2 },
+    ];
+    const result = await apply(ops);
+    expect(result).toEqual({ ok: true });
+    expect(mockTabsCreate).toHaveBeenCalledWith({ url: "https://restore.com/", windowId: 1, index: 2 });
+    expect(mockStorageSet).toHaveBeenCalledWith({ savedForLater: [] });
+  });
+
   it("assignFolder op with null folderId removes entry", async () => {
     mockStorageGet.mockResolvedValueOnce({ tabFolderMap: { 1: 5, 2: 3 } });
     const ops: Operation[] = [

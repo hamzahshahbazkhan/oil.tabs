@@ -51,6 +51,29 @@ export async function apply(
         case "discard":
           await browser.tabs.discard(op.tabId);
           break;
+        case "saveForLater": {
+          const { savedForLater } = await browser.storage.local.get("savedForLater");
+          const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
+          list.push({ url: op.url, title: op.title, savedAt: Date.now() });
+          await browser.storage.local.set({ savedForLater: list });
+          if (op.tabId > 0) {
+            await browser.tabs.remove(op.tabId);
+          }
+          break;
+        }
+        case "bookmark":
+          await browser.bookmarks.create({ title: op.title, url: op.url });
+          await browser.tabs.remove(op.tabId);
+          break;
+        case "restoreFromSaved": {
+          await browser.tabs.create({ url: op.url, windowId: op.windowId, index: op.index });
+          const { savedForLater } = await browser.storage.local.get("savedForLater");
+          const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
+          const idx = list.findIndex((item) => item.url === op.url);
+          if (idx !== -1) list.splice(idx, 1);
+          await browser.storage.local.set({ savedForLater: list });
+          break;
+        }
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);

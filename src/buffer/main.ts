@@ -7,6 +7,7 @@ import { diff } from "../background/diff";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
+import type { SavedItem } from "../shared/storageSchema";
 import { EditorState } from "@codemirror/state";
 import { idMap, nonEditableLines } from "./bufferState";
 import { bufferDarkTheme } from "./theme";
@@ -16,6 +17,7 @@ let lastSnapshot: Snapshot | null = null;
 let lastUrlMap = new Map<string, number>();
 let lastFolders: FolderInfo[] = [];
 let lastTabFolderMap: Record<number, number> = {};
+let lastSavedItems: SavedItem[] = [];
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function updateStatusBar() {
@@ -29,8 +31,9 @@ function updateStatusBar() {
     for (const [key, val] of Object.entries(lastTabFolderMap)) {
       folderMap.set(Number(key), val);
     }
-    const ops = diff(lastSnapshot, parsed, folderMap);
-    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0 };
+    const savedUrls = new Set(lastSavedItems.map((item) => item.url));
+    const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
+    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0, saveForLater: 0, bookmark: 0, restoreFromSaved: 0 };
     for (const op of ops) {
       counts[op.kind]++;
     }
@@ -42,6 +45,8 @@ function updateStatusBar() {
     if (counts.group) parts.push(`${counts.group} group`);
     if (counts.assignFolder) parts.push(`${counts.assignFolder} folder`);
     if (counts.discard) parts.push(`${counts.discard} sleep`);
+    if (counts.saveForLater) parts.push(`${counts.saveForLater} save`);
+    if (counts.restoreFromSaved) parts.push(`${counts.restoreFromSaved} restore`);
     opsSummary = parts.length ? ` │ ${parts.join(" · ")}` : "";
   }
   const el = document.getElementById("statusbar");
@@ -69,7 +74,8 @@ function save(force: boolean) {
   if (!lastSnapshot) return;
   const text = view.state.doc.toString();
   const parsed = parse(text, lastUrlMap);
-  const ops = diff(lastSnapshot, parsed);
+  const savedUrls = new Set(lastSavedItems.map((item) => item.url));
+  const ops = diff(lastSnapshot, parsed, undefined, savedUrls);
   const closeCount = ops.filter((op) => op.kind === "close").length;
 
   if (!force && closeCount > LARGE_DIFF_THRESHOLD) {
@@ -117,13 +123,13 @@ function init() {
       switch (message.type) {
         case "SNAPSHOT":
           hideStaleBanner();
-          renderSnapshot(message.snapshot, message.folders, message.tabFolderMap);
+          renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
           updateStatusBar();
           break;
         case "APPLY_RESULT":
           if (message.ok) {
             hideStaleBanner();
-            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap);
+            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
             updateStatusBar();
           } else {
             alert(`tab-oil error: ${message.error}`);
@@ -142,11 +148,12 @@ function init() {
   }
 }
 
-function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>): void {
+function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
   lastSnapshot = snapshot;
   lastFolders = folders ?? [];
   lastTabFolderMap = tabFolderMap ?? {};
-  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap);
+  lastSavedItems = savedItems ?? [];
+  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
   lastUrlMap = urlMap;
   idMap.clear();
   for (const [k, v] of newIdMap) {

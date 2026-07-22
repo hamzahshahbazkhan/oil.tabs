@@ -51,10 +51,10 @@ describe("parse", () => {
     const { text, urlMap } = snapshotToText(fixture);
     const parsed = parse(text, urlMap);
     expect(parsed).toHaveLength(4);
-    expect(parsed[0]).toEqual({ tabId: 1, windowId: 1, url: "https://example.com/", groupId: null, folderId: null });
-    expect(parsed[1]).toEqual({ tabId: 2, windowId: 1, url: "https://github.com/", groupId: null, folderId: null });
-    expect(parsed[2]).toEqual({ tabId: 3, windowId: 2, url: "https://news.ycombinator.com/", groupId: null, folderId: null });
-    expect(parsed[3]).toEqual({ tabId: 4, windowId: 2, url: "https://mail.google.com/", groupId: null, folderId: null });
+    expect(parsed[0]).toEqual({ tabId: 1, windowId: 1, url: "https://example.com/", groupId: null, folderId: null, saved: false });
+    expect(parsed[1]).toEqual({ tabId: 2, windowId: 1, url: "https://github.com/", groupId: null, folderId: null, saved: false });
+    expect(parsed[2]).toEqual({ tabId: 3, windowId: 2, url: "https://news.ycombinator.com/", groupId: null, folderId: null, saved: false });
+    expect(parsed[3]).toEqual({ tabId: 4, windowId: 2, url: "https://mail.google.com/", groupId: null, folderId: null, saved: false });
   });
 
   it("handles lines with missing separator gracefully", () => {
@@ -68,17 +68,27 @@ describe("parse", () => {
     expect(() => parse(modifiedText, urlMap)).not.toThrow();
   });
 
+  it("parses saved section lines with saved flag", () => {
+    const { text, urlMap } = snapshotToText(fixture);
+    const savedText = text + "\n\n── Saved For Later · 2 items ──\nSaved One — https://saved1.com/\nSaved Two — https://saved2.com/";
+    const parsed = parse(savedText, urlMap);
+    const savedLines = parsed.filter((l) => l.saved);
+    expect(savedLines).toHaveLength(2);
+    expect(savedLines[0].url).toBe("https://saved1.com/");
+    expect(savedLines[1].url).toBe("https://saved2.com/");
+    const liveLines = parsed.filter((l) => !l.saved);
+    expect(liveLines).toHaveLength(4);
+  });
+
   it("reordered lines preserve tabId via URL matching", () => {
     const { text, urlMap } = snapshotToText(fixture);
     const lines = text.split("\n");
-    // Swap lines 1 and 2 (the two content lines in window 1)
     [lines[1], lines[2]] = [lines[2], lines[1]];
     const modifiedText = lines.join("\n");
     const parsed = parse(modifiedText, urlMap);
-    // After swap: line 1 has tab2's text, line 2 has tab1's text
-    // But tabIds should follow URLs: tabId 2 at position 0, tabId 1 at position 1
     expect(parsed[0].tabId).toBe(2);
     expect(parsed[0].url).toBe("https://github.com/");
+    expect(parsed[0].saved).toBe(false);
     expect(parsed[1].tabId).toBe(1);
     expect(parsed[1].url).toBe("https://example.com/");
   });

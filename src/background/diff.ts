@@ -1,6 +1,6 @@
 import type { BufferLine, Operation, ParsedLine, Snapshot } from "../shared/types";
 
-export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Map<number, number | null>): Operation[] {
+export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Map<number, number | null>, savedUrls?: Set<string>): Operation[] {
   const oldById = new Map<number, BufferLine>();
   for (const line of oldSnapshot.lines) {
     if (line.tabId !== null) {
@@ -8,16 +8,20 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
     }
   }
 
+  const savedTabIds = new Set<number>();
   const newIds = new Set<number>();
   for (const line of parsed) {
-    if (line.tabId !== null) {
+    if (line.tabId !== null && !line.saved) {
       newIds.add(line.tabId);
+    }
+    if (line.tabId !== null && line.saved) {
+      savedTabIds.add(line.tabId);
     }
   }
 
   const closeOps: Operation[] = [];
   for (const tabId of oldById.keys()) {
-    if (!newIds.has(tabId)) {
+    if (!newIds.has(tabId) && !savedTabIds.has(tabId)) {
       closeOps.push({ kind: "close", tabId });
     }
   }
@@ -133,9 +137,28 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
     }
   }
 
+  const saveRestoreOps: Operation[] = [];
+  for (const line of parsed) {
+    if (line.saved) {
+      if (line.tabId !== null) {
+        const oldLine = oldById.get(line.tabId);
+        saveRestoreOps.push({ kind: "saveForLater", tabId: line.tabId, url: line.url, title: oldLine?.title ?? "" });
+      } else {
+        saveRestoreOps.push({ kind: "saveForLater", tabId: 0, url: line.url, title: "" });
+      }
+    }
+  }
+  if (savedUrls) {
+    for (const line of parsed) {
+      if (!line.saved && savedUrls.has(line.url)) {
+        saveRestoreOps.push({ kind: "restoreFromSaved", url: line.url, title: "", windowId: line.windowId, index: 0 });
+      }
+    }
+  }
+
   const validMoveOps = validateMoveOps(moveOps, oldSnapshot);
 
-  return [...closeOps, ...validMoveOps, ...createOps, ...navigateOps, ...groupOps, ...folderOps];
+  return [...closeOps, ...validMoveOps, ...createOps, ...navigateOps, ...groupOps, ...folderOps, ...saveRestoreOps];
 }
 
 export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {

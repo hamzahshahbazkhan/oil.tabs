@@ -1,4 +1,5 @@
 import type { Snapshot } from "./types";
+import type { SavedItem } from "./storageSchema";
 
 export interface FolderInfo {
   id: number;
@@ -6,8 +7,8 @@ export interface FolderInfo {
 }
 
 export type BgToBuffer =
-  | { type: "SNAPSHOT"; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number> }
-  | { type: "APPLY_RESULT"; ok: boolean; error?: string; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number> }
+  | { type: "SNAPSHOT"; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number>; savedItems?: SavedItem[] }
+  | { type: "APPLY_RESULT"; ok: boolean; error?: string; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number>; savedItems?: SavedItem[] }
   | { type: "STALE_WARNING" };
 
 export type BufferToBg =

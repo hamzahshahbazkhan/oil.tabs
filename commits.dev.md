@@ -295,7 +295,7 @@ below are self-contained enough to proceed without it.)_
     `gr` to refresh, confirm the assignment persisted.
   - Commit message: `feat(folders): add virtual folder assignment and rendering`
 
-- [ ] **v0.6.3 — Bulk sleep (discard) via visual mode**
+- [x] **v0.6.3 — Bulk sleep (discard) via visual mode**
   - Add `discard` to `Operation`; `apply.ts` → `browser.tabs.discard(tabId)`.
   - Add a visual-mode-range Ex command (e.g. `:'<,'>sleep`) in
     `vimCommands.ts` that reads all tabIds under the selected line range and
@@ -435,4 +435,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  d36f6eb  test  v0.3.7 empty commit — manual verification needed: edit URL on existing line, `:w`, confirm that real tab navigates (not a new tab).
 2026-07-22  4c65ca9  feat  v0.6.1 Added bookmarks permission; created storageSchema.ts with VirtualFolder, SavedItem, UserSettings, ExtensionStorage interfaces.
 2026-07-22  6e293bb  feat  v0.6.2 Added assignFolder to Operation, folderId to ParsedLine; snapshotToText renders folder headers; parse detects folder headers; diff detects folder reassignment; apply writes folder assignments to storage.local; folder data threaded through snapshot pipeline; 3 new diff tests + 2 new apply tests.
+2026-07-22  8ee17ae  feat  v0.6.3 Added discard to Operation; :sleep Ex command in vimCommands uses visual selection range; DISCARD_TABS message type; background handler calls tabs.discard; snapshotToText marks discarded tab titles with [sleep] prefix; apply test for discard op.
 ```

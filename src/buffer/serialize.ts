@@ -1,13 +1,16 @@
 import type { Snapshot, ParsedLine } from "../shared/types";
+import type { SavedItem } from "../shared/storageSchema";
 
 const WINDOW_HEADER_RE = /^── Window (\d+) · (\d+) tabs? ──$/;
 const GROUP_HEADER_RE = /^▸ Group: (\d+)$/;
 const FOLDER_HEADER_RE = /^▸ Folder: (.+)$/;
+const SAVED_HEADER_RE = /^── Saved For Later · (\d+) items? ──$/;
 
 export function snapshotToText(
   snapshot: Snapshot,
   folders?: { id: number; name: string }[],
   tabFolderMap?: Record<number, number>,
+  savedItems?: SavedItem[],
 ): {
   text: string;
   idMap: Map<number, number>;
@@ -111,6 +114,19 @@ export function snapshotToText(
     lineNum++;
   }
 
+  if (savedItems && savedItems.length > 0) {
+    if (lines[lines.length - 1] !== "") {
+      lines.push("");
+      lineNum++;
+    }
+    lines.push(`── Saved For Later · ${savedItems.length} ${savedItems.length === 1 ? "item" : "items"} ──`);
+    lineNum++;
+    for (const item of savedItems) {
+      lines.push(`${item.title} — ${item.url}`);
+      lineNum++;
+    }
+  }
+
   if (lines.length > 0 && lines[lines.length - 1] === "") {
     lines.pop();
   }
@@ -124,17 +140,28 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   let currentWindowId = 0;
   let currentGroupId: number | null = null;
   let currentFolderId: number | null = null;
+  let inSavedSection = false;
   const seenUrl = new Set<string>();
 
   const folders = new Map<string, number>();
 
   for (let i = 0; i < textLines.length; i++) {
     const line = textLines[i];
+
+    if (line.match(SAVED_HEADER_RE)) {
+      inSavedSection = true;
+      currentWindowId = 0;
+      currentGroupId = null;
+      currentFolderId = null;
+      continue;
+    }
+
     const headerMatch = line.match(WINDOW_HEADER_RE);
     if (headerMatch) {
       currentWindowId = parseInt(headerMatch[1], 10);
       currentGroupId = null;
       currentFolderId = null;
+      inSavedSection = false;
       continue;
     }
 
@@ -167,7 +194,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
       }
     }
 
-    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId });
+    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId, saved: inSavedSection });
   }
 
   return result;
