@@ -1,6 +1,7 @@
 import type { Snapshot, ParsedLine } from "../shared/types";
 
 const WINDOW_HEADER_RE = /^── Window (\d+) · (\d+) tabs? ──$/;
+const GROUP_HEADER_RE = /^▸ (.+)$/;
 
 export function snapshotToText(snapshot: Snapshot): {
   text: string;
@@ -32,16 +33,41 @@ export function snapshotToText(snapshot: Snapshot): {
     lines.push(`── Window ${windowId} · ${tabs.length} ${tabs.length === 1 ? "tab" : "tabs"} ──`);
     lineNum++;
 
+    const groups = new Map<number | string, typeof tabs>();
     for (const tab of tabs) {
-      lines.push(`${tab.title} — ${tab.url}`);
-      if (tab.tabId !== null) {
-        idMap.set(lineNum, tab.tabId);
-        urlMap.set(tab.url, tab.tabId);
+      const key = tab.groupId ?? "__ungrouped";
+      const group = groups.get(key);
+      if (group) {
+        group.push(tab);
+      } else {
+        groups.set(key, [tab]);
       }
-      if (!tab.editable) {
-        nonEditableLines.add(lineNum);
+    }
+
+    const groupKeys = [...groups.keys()].sort((a, b) => {
+      if (a === "__ungrouped") return 1;
+      if (b === "__ungrouped") return -1;
+      return (a as number) - (b as number);
+    });
+
+    for (const key of groupKeys) {
+      const groupTabs = groups.get(key)!;
+      if (key !== "__ungrouped") {
+        lines.push(`▸ Group: ${key}`);
+        lineNum++;
       }
-      lineNum++;
+
+      for (const tab of groupTabs) {
+        lines.push(`${tab.title} — ${tab.url}`);
+        if (tab.tabId !== null) {
+          idMap.set(lineNum, tab.tabId);
+          urlMap.set(tab.url, tab.tabId);
+        }
+        if (!tab.editable) {
+          nonEditableLines.add(lineNum);
+        }
+        lineNum++;
+      }
     }
 
     lines.push("");
@@ -65,6 +91,11 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
     const headerMatch = line.match(WINDOW_HEADER_RE);
     if (headerMatch) {
       currentWindowId = parseInt(headerMatch[1], 10);
+      continue;
+    }
+
+    const groupHeaderMatch = line.match(GROUP_HEADER_RE);
+    if (groupHeaderMatch) {
       continue;
     }
 
