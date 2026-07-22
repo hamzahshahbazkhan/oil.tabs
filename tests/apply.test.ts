@@ -5,6 +5,7 @@ const mockTabsRemove = vi.fn();
 const mockTabsMove = vi.fn();
 const mockTabsCreate = vi.fn();
 const mockTabsUpdate = vi.fn();
+const mockTabsDiscard = vi.fn();
 const mockStorageGet = vi.fn();
 const mockStorageSet = vi.fn();
 
@@ -15,6 +16,7 @@ vi.mock("webextension-polyfill", () => ({
       move: (...args: unknown[]) => mockTabsMove(...args),
       create: (...args: unknown[]) => mockTabsCreate(...args),
       update: (...args: unknown[]) => mockTabsUpdate(...args),
+      discard: (...args: unknown[]) => mockTabsDiscard(...args),
     },
     storage: {
       local: {
@@ -78,6 +80,15 @@ describe("apply", () => {
     expect(result).toEqual({ ok: true });
     expect(mockStorageSet).toHaveBeenCalledTimes(1);
     expect(mockStorageSet).toHaveBeenCalledWith({ tabFolderMap: { 1: 5 } });
+  });
+
+  it("discard op calls tabs.discard", async () => {
+    const ops: Operation[] = [
+      { kind: "discard", tabId: 42 },
+    ];
+    const result = await apply(ops);
+    expect(result).toEqual({ ok: true });
+    expect(mockTabsDiscard).toHaveBeenCalledWith(42);
   });
 
   it("assignFolder op with null folderId removes entry", async () => {

@@ -16,7 +16,8 @@ export type Operation =
   | { kind: "create"; url: string; windowId: number; index: number }
   | { kind: "navigate"; tabId: number; url: string }
   | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" }
-  | { kind: "assignFolder"; tabId: number; folderId: number | null };
+  | { kind: "assignFolder"; tabId: number; folderId: number | null }
+  | { kind: "discard"; tabId: number };
 
 export interface Snapshot {
   takenAt: number;

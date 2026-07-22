@@ -30,7 +30,7 @@ function updateStatusBar() {
       folderMap.set(Number(key), val);
     }
     const ops = diff(lastSnapshot, parsed, folderMap);
-    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0 };
+    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0 };
     for (const op of ops) {
       counts[op.kind]++;
     }
@@ -41,6 +41,7 @@ function updateStatusBar() {
     if (counts.navigate) parts.push(`${counts.navigate} nav`);
     if (counts.group) parts.push(`${counts.group} group`);
     if (counts.assignFolder) parts.push(`${counts.assignFolder} folder`);
+    if (counts.discard) parts.push(`${counts.discard} sleep`);
     opsSummary = parts.length ? ` │ ${parts.join(" · ")}` : "";
   }
   const el = document.getElementById("statusbar");

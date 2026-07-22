@@ -121,7 +121,14 @@ browser.runtime.onMessage.addListener(
         break;
       }
 
-      case "DISCARD": {
+      case "DISCARD_TABS": {
+        for (const tabId of message.tabIds) {
+          try {
+            await browser.tabs.discard(tabId);
+          } catch {
+            // Tab may already be discarded or closed
+          }
+        }
         break;
       }
     }

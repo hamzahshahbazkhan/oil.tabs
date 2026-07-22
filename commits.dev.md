@@ -280,7 +280,7 @@ below are self-contained enough to proceed without it.)_
   - Verify: `npm run build` compiles.
   - Commit message: `feat(storage): add schema for folders, saved items, settings`
 
-- [ ] **v0.6.2 — Virtual folders: assign + render**
+- [x] **v0.6.2 — Virtual folders: assign + render**
   - Add `assignFolder` to `Operation` (metadata-only, no browser API call —
     `apply.ts` routes it to `browser.storage.local` instead of `browser.tabs`).
   - Render folder headers as a second grouping layer under window headers
@@ -434,4 +434,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  861115d  test  v0.3.6 empty commit — manual verification needed: load unpacked, `o` new line with URL, `:w`, confirm a real new tab opens at right window/position.
 2026-07-22  d36f6eb  test  v0.3.7 empty commit — manual verification needed: edit URL on existing line, `:w`, confirm that real tab navigates (not a new tab).
 2026-07-22  4c65ca9  feat  v0.6.1 Added bookmarks permission; created storageSchema.ts with VirtualFolder, SavedItem, UserSettings, ExtensionStorage interfaces.
+2026-07-22  6e293bb  feat  v0.6.2 Added assignFolder to Operation, folderId to ParsedLine; snapshotToText renders folder headers; parse detects folder headers; diff detects folder reassignment; apply writes folder assignments to storage.local; folder data threaded through snapshot pipeline; 3 new diff tests + 2 new apply tests.
 ```

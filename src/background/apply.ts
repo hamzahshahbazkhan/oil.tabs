@@ -48,6 +48,9 @@ export async function apply(
           await browser.storage.local.set({ tabFolderMap: map });
           break;
         }
+        case "discard":
+          await browser.tabs.discard(op.tabId);
+          break;
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);

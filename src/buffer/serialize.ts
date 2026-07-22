@@ -93,7 +93,8 @@ export function snapshotToText(
         }
 
         for (const tab of groupTabs) {
-          lines.push(`${tab.title} — ${tab.url}`);
+          const title = tab.discarded ? `[sleep] ${tab.title}` : tab.title;
+          lines.push(`${title} — ${tab.url}`);
           if (tab.tabId !== null) {
             idMap.set(lineNum, tab.tabId);
             urlMap.set(tab.url, tab.tabId);

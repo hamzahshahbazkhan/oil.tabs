@@ -95,4 +95,19 @@ export function setupVimCommands(
 
   Vim.mapCommand("J", "action", "moveLineDown");
   Vim.mapCommand("K", "action", "moveLineUp");
+
+  Vim.defineEx("sleep", "sl", () => {
+    const sel = view.state.selection.main;
+    const fromLine = view.state.doc.lineAt(sel.from);
+    const toLine = view.state.doc.lineAt(sel.to);
+    const tabIds: number[] = [];
+    for (let i = fromLine.number; i <= toLine.number; i++) {
+      if (nonEditableLines.has(i)) continue;
+      const tabId = idMap.get(i);
+      if (tabId !== undefined) tabIds.push(tabId);
+    }
+    if (tabIds.length > 0) {
+      chrome.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });
+    }
+  });
 }
