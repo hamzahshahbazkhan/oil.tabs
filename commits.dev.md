@@ -151,7 +151,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     updates live and resets to empty after a successful `:w`.
   - Commit message: `feat(buffer): add live pending-change status line`
 
-- [ ] **v0.3.9 — Confirmation gate on large destructive diffs**
+- [x] **v0.3.9 — Confirmation gate on large destructive diffs**
   - Add a constant `LARGE_DIFF_THRESHOLD = 10` (close op count) in
     `src/shared/`.
   - Before sending `SAVE`, if pending close-op count exceeds the threshold,
@@ -419,4 +419,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  e015399  v0.3.4  Already implemented close→move→create→navigate ordering in diff() as part of v0.3.2/3.
 2026-07-22  aa33f28  v0.3.5  Replaced create/navigate stubs in apply() with real browser.tabs.create/update calls; added apply tests.
 2026-07-22  7c9072d  v0.3.8  Added fixed bottom status bar to buffer.html; debounced live parse+diff update on every doc change; clears on successful :w.
+2026-07-22  5290cd6  v0.3.9  Added LARGE_DIFF_THRESHOLD constant and confirm dialog before SAVE when close count exceeds threshold; added :w! bypass.
 ```
