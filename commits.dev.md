@@ -203,7 +203,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     confirm the banner appears and unsaved buffer edits are untouched.
   - Commit message: `feat(buffer): warn on stale state without overwriting edits`
 
-- [ ] **v0.4.5 — Read-only rendering for non-editable URLs**
+- [x] **v0.4.5 — Read-only rendering for non-editable URLs**
   - Use the `editable: false` field (already set in `snapshot.ts` from
     v0.1) to render those lines with a distinct CSS class (dimmed) and
     block edits to them via a CM6 `EditorState.changeFilter` that rejects
@@ -424,4 +424,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  f9c8a95  v0.4.2  Added gr mapping that sends REQUEST_SNAPSHOT; existing SNAPSHOT handler replaces buffer, discarding edits.
 2026-07-22  79fc0e3  v0.4.3  Added clipboardWrite permission; mapped yy to action that extracts URL via extractUrl() and calls navigator.clipboard.writeText().
 2026-07-22  1a1c554  v0.4.4  Added tab event listeners in background that send STALE_WARNING to buffer tab; buffer shows/hides a non-blocking banner.
+2026-07-22  2bd948f  v0.4.5  snapshotToText now returns nonEditableLines set; buffer renders them dimmed and blocks changes via transactionFilter.
 ```
