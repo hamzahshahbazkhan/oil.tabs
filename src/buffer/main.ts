@@ -1,14 +1,14 @@
 import { EditorView, basicSetup } from "codemirror";
 import { vim } from "@replit/codemirror-vim";
 import { snapshotToText, parse } from "./serialize";
-import { headerLineDeco } from "./decorations";
+import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { diff } from "../background/diff";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import { EditorState } from "@codemirror/state";
-import { idMap } from "./bufferState";
+import { idMap, nonEditableLines } from "./bufferState";
 
 let view: EditorView;
 let lastSnapshot: Snapshot | null = null;
@@ -85,6 +85,8 @@ function init() {
           basicSetup,
           vim(),
           headerLineDeco,
+          nonEditableLineDeco,
+          nonEditableTransactionFilter,
           statusListener,
         ],
       }),
@@ -124,11 +126,15 @@ function init() {
 
 function renderSnapshot(snapshot: Snapshot): void {
   lastSnapshot = snapshot;
-  const { text, urlMap, idMap: newIdMap } = snapshotToText(snapshot);
+  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot);
   lastUrlMap = urlMap;
   idMap.clear();
   for (const [k, v] of newIdMap) {
     idMap.set(k, v);
+  }
+  nonEditableLines.clear();
+  for (const v of newNonEditable) {
+    nonEditableLines.add(v);
   }
   view.dispatch({
     changes: {

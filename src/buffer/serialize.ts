@@ -6,9 +6,11 @@ export function snapshotToText(snapshot: Snapshot): {
   text: string;
   idMap: Map<number, number>;
   urlMap: Map<string, number>;
+  nonEditableLines: Set<number>;
 } {
   const idMap = new Map<number, number>();
   const urlMap = new Map<string, number>();
+  const nonEditableLines = new Set<number>();
   const lines: string[] = [];
 
   const windowGroups = new Map<number, typeof snapshot.lines>();
@@ -36,6 +38,9 @@ export function snapshotToText(snapshot: Snapshot): {
         idMap.set(lineNum, tab.tabId);
         urlMap.set(tab.url, tab.tabId);
       }
+      if (!tab.editable) {
+        nonEditableLines.add(lineNum);
+      }
       lineNum++;
     }
 
@@ -47,7 +52,7 @@ export function snapshotToText(snapshot: Snapshot): {
     lines.pop();
   }
 
-  return { text: lines.join("\n"), idMap, urlMap };
+  return { text: lines.join("\n"), idMap, urlMap, nonEditableLines };
 }
 
 export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
