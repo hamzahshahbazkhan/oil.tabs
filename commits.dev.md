@@ -164,7 +164,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
 
 ## v0.4 — Ergonomics
 
-- [ ] **v0.4.1 — `gx`: jump to tab under cursor without saving**
+- [x] **v0.4.1 — `gx`: jump to tab under cursor without saving**
   - In `src/buffer/vimCommands.ts`, register a `Vim.defineAction` that
     reads the tabId at the cursor's line (via the decoration/idMap lookup
     from v0.1) and sends `{type:'FOCUS_TAB', tabId}`.
@@ -420,4 +420,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  aa33f28  v0.3.5  Replaced create/navigate stubs in apply() with real browser.tabs.create/update calls; added apply tests.
 2026-07-22  7c9072d  v0.3.8  Added fixed bottom status bar to buffer.html; debounced live parse+diff update on every doc change; clears on successful :w.
 2026-07-22  5290cd6  v0.3.9  Added LARGE_DIFF_THRESHOLD constant and confirm dialog before SAVE when close count exceeds threshold; added :w! bypass.
+2026-07-22  f70a725  v0.4.1  Added gx mapping to focus tab under cursor; created bufferState.ts shared idMap; background FOCUS_TAB now also focuses the window.
 ```
