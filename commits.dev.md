@@ -183,7 +183,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     live browser state.
   - Commit message: `feat(buffer): add gr to refresh buffer from live state`
 
-- [ ] **v0.4.3 — `yy` also copies URL to system clipboard**
+- [x] **v0.4.3 — `yy` also copies URL to system clipboard**
   - Add `clipboardWrite` permission to `manifest.json`.
   - Hook `yy` (and visual-mode `y`) so that, in addition to vim's native
     register yank, the URL portion of the yanked line(s) is also written via
@@ -422,4 +422,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  5290cd6  v0.3.9  Added LARGE_DIFF_THRESHOLD constant and confirm dialog before SAVE when close count exceeds threshold; added :w! bypass.
 2026-07-22  f70a725  v0.4.1  Added gx mapping to focus tab under cursor; created bufferState.ts shared idMap; background FOCUS_TAB now also focuses the window.
 2026-07-22  f9c8a95  v0.4.2  Added gr mapping that sends REQUEST_SNAPSHOT; existing SNAPSHOT handler replaces buffer, discarding edits.
+2026-07-22  79fc0e3  v0.4.3  Added clipboardWrite permission; mapped yy to action that extracts URL via extractUrl() and calls navigator.clipboard.writeText().
 ```
