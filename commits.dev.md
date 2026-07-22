@@ -216,7 +216,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
 
 ## v0.5 — Multi-window & grouping polish
 
-- [ ] **v0.5.1 — Cross-window move via header reassignment**
+- [x] **v0.5.1 — Cross-window move via header reassignment**
   - Confirm (write a test if missing) that moving a parsed line's `windowId`
     away from its original (by cutting it under a different header and
     pasting) already produces a correct `move` op per the v0.2 diff logic.
@@ -225,7 +225,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     `:w`, confirm the tab actually relocates to that window.
   - Commit message: `fix(diff): ensure cross-window line moves produce correct move ops`
 
-- [ ] **v0.5.2 — Add `tabGroups` support: types**
+- [x] **v0.5.2 — Add `tabGroups` support: types**
   - Add `groupId: number | null` to `BufferLine`.
   - Add `| { kind: 'group'; tabId: number; groupId: number | 'NEW' | 'NONE' }`
     to `Operation`.
@@ -425,4 +425,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  79fc0e3  v0.4.3  Added clipboardWrite permission; mapped yy to action that extracts URL via extractUrl() and calls navigator.clipboard.writeText().
 2026-07-22  1a1c554  v0.4.4  Added tab event listeners in background that send STALE_WARNING to buffer tab; buffer shows/hides a non-blocking banner.
 2026-07-22  2bd948f  v0.4.5  snapshotToText now returns nonEditableLines set; buffer renders them dimmed and blocks changes via transactionFilter.
+2026-07-22  beb634a  v0.5.1+2  Marked v0.5.1 done (already tested). Added groupId to BufferLine, 'group' to Operation, tabGroups permission; stubs in apply/diff for new variant.
 ```
