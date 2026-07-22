@@ -33,7 +33,7 @@ export async function takeSnapshot(): Promise<Snapshot> {
       pinned: tab.pinned ?? false,
       discarded: tab.discarded ?? false,
       editable,
-      groupId: tab.groupId && tab.groupId > -1 ? tab.groupId : null,
+      groupId: tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
     });
   }
 

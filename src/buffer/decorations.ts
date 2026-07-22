@@ -58,6 +58,7 @@ function buildNonEditableDecorations(state: EditorState): DecorationSet {
 export const nonEditableTransactionFilter = EditorState.transactionFilter.of((tr) => {
   if (!tr.docChanged) return [tr];
   for (const lineNo of nonEditableLines) {
+    if (lineNo < 1 || lineNo > tr.startState.doc.lines) continue;
     const line = tr.startState.doc.line(lineNo);
     let touched = false;
     tr.changes.iterChanges((fromA, toA) => {

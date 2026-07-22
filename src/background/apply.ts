@@ -28,8 +28,13 @@ export async function apply(
           await browser.tabs.update(op.tabId, { url: op.url });
           break;
         case "group": {
-          const groupId = op.groupId === "NONE" ? -1 : op.groupId;
-          await browser.tabs.group({ tabIds: [op.tabId], groupId });
+          if (op.groupId === "NONE") {
+            await browser.tabs.group({ tabIds: [op.tabId], groupId: -1 });
+          } else if (op.groupId === "NEW") {
+            await browser.tabs.group({ tabIds: [op.tabId] });
+          } else {
+            await browser.tabs.group({ tabIds: [op.tabId], groupId: op.groupId });
+          }
           break;
         }
         default: {

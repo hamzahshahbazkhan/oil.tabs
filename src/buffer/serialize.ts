@@ -1,7 +1,7 @@
 import type { Snapshot, ParsedLine } from "../shared/types";
 
 const WINDOW_HEADER_RE = /^── Window (\d+) · (\d+) tabs? ──$/;
-const GROUP_HEADER_RE = /^▸ (.+)$/;
+const GROUP_HEADER_RE = /^▸ Group: (\d+)$/;
 
 export function snapshotToText(snapshot: Snapshot): {
   text: string;
