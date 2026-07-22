@@ -203,7 +203,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
 export function normalizeUrl(url: string): string {
   const trimmed = url.trim();
   if (trimmed.length === 0) return trimmed;
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) return trimmed;
   if (/\s/.test(trimmed)) return trimmed;
   return "https://" + trimmed;
 }

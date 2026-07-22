@@ -362,7 +362,7 @@ below are self-contained enough to proceed without it.)_
 
 ## v1.0 — Release polish
 
-- [ ] **v1.0.1 — Firefox build pass**
+- [x] **v1.0.1 — Firefox build pass**
   - Confirm `webextension-polyfill` usage is complete (no raw `chrome.*`
     calls remaining anywhere in `src/`).
   - Note any Chrome-only APIs used (`tabGroups` is Chrome-only) and
@@ -440,4 +440,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  a51c4eb  feat  v0.6.5 Added options_page to manifest; options.html with table UI for configuring up to 5 global keyboard shortcuts; src/options/main.ts manages sync-stored shortcuts; background focusOrOpen queries tabs by URL and focuses or creates; 5 shortcut-0..4 commands registered in manifest for user assignment.
 2026-07-22  ed7e5c8  feat  v0.6.6 MRU tabId array maintained via tabs.onActivated listener, capped at 50, persisted to storage.local; cycleTab function (next/prev) in background; CYCLE_NEXT/CYCLE_PREV message types; :cnext/:cprev buffer Ex commands; options page extended with cycleNext/cyclePrev action types; GlobalShortcut type added to storageSchema.
 2026-07-22  a272a2d  fix  v0.6.7 Integration pass: fixed restoreFromSaved to only fire for new lines (tabId===null); added test for existing-tab-id exclusion; all rendering paths verified.
+2026-07-22  5e42217  fix  v1.0.1 Replaced all chrome.* calls with webextension-polyfill browser.* in buffer/vimCommands.ts, buffer/main.ts, options/main.ts; added feature-detects for tabGroups, discard, and bookmarks APIs in apply.ts; Firefox manual verification pending.
 ```

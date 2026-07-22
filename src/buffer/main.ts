@@ -19,6 +19,7 @@ let lastUrlMap = new Map<string, number>();
 let lastFolders: FolderInfo[] = [];
 let lastTabFolderMap: Record<number, number> = {};
 let lastSavedItems: SavedItem[] = [];
+let dirty = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function updateStatusBar() {
@@ -86,6 +87,7 @@ function save(force: boolean) {
     if (!ok) return;
   }
 
+  dirty = false;
   browser.runtime.sendMessage({ type: "SAVE", text });
 }
 
@@ -97,6 +99,7 @@ function init() {
   try {
     const statusListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
+        dirty = true;
         scheduleStatusUpdate();
       }
     });
@@ -137,7 +140,11 @@ function init() {
           }
           break;
         case "STALE_WARNING":
-          showStaleBanner();
+          if (!dirty) {
+            browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+          } else {
+            showStaleBanner();
+          }
           break;
       }
     });
@@ -150,6 +157,7 @@ function init() {
 }
 
 function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
+  dirty = false;
   lastSnapshot = snapshot;
   lastFolders = folders ?? [];
   lastTabFolderMap = tabFolderMap ?? {};

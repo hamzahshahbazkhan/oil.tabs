@@ -61,16 +61,17 @@ export function setupVimCommands(
   Vim.defineAction("moveLineDown", () => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
-    const next = line.number + 1;
+    if (nonEditableLines.has(line.number)) return;
+    let next = line.number + 1;
+    while (next <= view.state.doc.lines && nonEditableLines.has(next)) {
+      next++;
+    }
     if (next > view.state.doc.lines) return;
     const nextLine = view.state.doc.line(next);
-    if (nonEditableLines.has(line.number) || nonEditableLines.has(next)) return;
-    const lineText = line.text;
-    const nextText = nextLine.text;
     view.dispatch({
       changes: [
-        { from: line.from, to: line.to, insert: nextText },
-        { from: nextLine.from, to: nextLine.to, insert: lineText },
+        { from: line.from, to: line.to, insert: nextLine.text },
+        { from: nextLine.from, to: nextLine.to, insert: line.text },
       ],
       selection: { anchor: nextLine.from },
     });
@@ -79,16 +80,17 @@ export function setupVimCommands(
   Vim.defineAction("moveLineUp", () => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
-    const prev = line.number - 1;
+    if (nonEditableLines.has(line.number)) return;
+    let prev = line.number - 1;
+    while (prev >= 1 && nonEditableLines.has(prev)) {
+      prev--;
+    }
     if (prev < 1) return;
     const prevLine = view.state.doc.line(prev);
-    if (nonEditableLines.has(line.number) || nonEditableLines.has(prev)) return;
-    const lineText = line.text;
-    const prevText = prevLine.text;
     view.dispatch({
       changes: [
-        { from: prevLine.from, to: prevLine.to, insert: lineText },
-        { from: line.from, to: line.to, insert: prevText },
+        { from: prevLine.from, to: prevLine.to, insert: line.text },
+        { from: line.from, to: line.to, insert: prevLine.text },
       ],
       selection: { anchor: prevLine.from },
     });
