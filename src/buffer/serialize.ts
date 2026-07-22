@@ -74,7 +74,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   return result;
 }
 
-function extractUrl(line: string): string {
+export function extractUrl(line: string): string {
   const sepIndex = line.indexOf(" — ");
   if (sepIndex === -1) return line.trim();
   return line.slice(sepIndex + 3).trim();

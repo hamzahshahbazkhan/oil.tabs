@@ -1,6 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import { Vim } from "@replit/codemirror-vim";
 import { idMap } from "./bufferState";
+import { extractUrl } from "./serialize";
 
 export function setupVimCommands(
   view: EditorView,
@@ -26,4 +27,13 @@ export function setupVimCommands(
   });
 
   Vim.mapCommand("gr", "action", "refresh");
+
+  Vim.defineAction("yankUrl", (_cm: EditorView) => {
+    const cursor = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(cursor);
+    const url = extractUrl(line.text);
+    navigator.clipboard.writeText(url);
+  });
+
+  Vim.mapCommand("yy", "action", "yankUrl");
 }
