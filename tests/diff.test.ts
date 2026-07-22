@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { diff } from "../src/background/diff";
+import { diff, validateMoveOps } from "../src/background/diff";
 import type { Snapshot, ParsedLine, Operation } from "../src/shared/types";
 
-function makeSnapshot(lines: { tabId: number; windowId: number; index: number }[]): Snapshot {
+function makeSnapshot(lines: { tabId: number; windowId: number; index: number; pinned?: boolean }[]): Snapshot {
   return {
     takenAt: 0,
     lines: lines.map((l) => ({
@@ -11,7 +11,7 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number }[
       index: l.index,
       url: "https://example.com/",
       title: "Example",
-      pinned: false,
+      pinned: l.pinned ?? false,
       discarded: false,
       editable: true,
       groupId: null,
@@ -190,6 +190,27 @@ describe("diff", () => {
     const groupOps = ops.filter((op) => op.kind === "group");
     expect(groupOps).toHaveLength(1);
     expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: 5 });
+  });
+
+  it("invalid pinned/unpinned interleave is rejected by validateMoveOps", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0, pinned: true },
+      { tabId: 2, windowId: 1, index: 1, pinned: false },
+      { tabId: 3, windowId: 1, index: 2, pinned: true },
+    ]);
+    // Tab 3 (pinned) at index 2 → invalid because pinned tabs can only be [0, pinnedCount=2)
+    // Tab 2 (unpinned) at index 0 → invalid because unpinned can't be before pinned
+    const invalidMoves: Operation[] = [
+      { kind: "move", tabId: 2, windowId: 1, index: 0 },
+      { kind: "move", tabId: 3, windowId: 1, index: 2 },
+    ];
+    // Tab 1 (pinned) at index 1 → valid (stays within pinned section [0, 2))
+    const validMoves: Operation[] = [
+      { kind: "move", tabId: 1, windowId: 1, index: 1 },
+    ];
+    const valid = validateMoveOps([...invalidMoves, ...validMoves], old);
+    expect(valid).toHaveLength(1);
+    expect(valid[0].tabId).toBe(1);
   });
 
   it("removing groupId produces NONE group op", () => {

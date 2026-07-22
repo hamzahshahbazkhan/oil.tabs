@@ -125,7 +125,35 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  return [...closeOps, ...moveOps, ...createOps, ...navigateOps, ...groupOps];
+  const validMoveOps = validateMoveOps(moveOps, oldSnapshot);
+
+  return [...closeOps, ...validMoveOps, ...createOps, ...navigateOps, ...groupOps];
+}
+
+export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {
+  const pinnedByTab = new Map<number, boolean>();
+  for (const line of snapshot.lines) {
+    if (line.tabId !== null) {
+      pinnedByTab.set(line.tabId, line.pinned);
+    }
+  }
+
+  const perWindowPinnedCount = new Map<number, number>();
+  for (const line of snapshot.lines) {
+    if (line.tabId !== null && line.pinned) {
+      perWindowPinnedCount.set(line.windowId, (perWindowPinnedCount.get(line.windowId) ?? 0) + 1);
+    }
+  }
+
+  return moveOps.filter((op): op is Operation & { kind: "move" } => {
+    if (op.kind !== "move") return false;
+    const isPinned = pinnedByTab.get(op.tabId) ?? false;
+    const pinnedCount = perWindowPinnedCount.get(op.windowId) ?? 0;
+    // Pinned tabs must stay in [0, pinnedCount), unpinned in [pinnedCount, ...)
+    if (isPinned && op.index >= pinnedCount) return false;
+    if (!isPinned && op.index < pinnedCount) return false;
+    return true;
+  });
 }
 
 function computeLCS(a: number[], b: number[]): number[] {
