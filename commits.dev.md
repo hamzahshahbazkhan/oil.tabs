@@ -252,7 +252,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     group's sub-header, `:w`, confirm the real tab's group changes.
   - Commit message: `feat(diff,apply): support moving tabs between groups`
 
-- [ ] **v0.5.5 — Pinned-tab boundary handling**
+- [x] **v0.5.5 — Pinned-tab boundary handling**
   - Add `pinned` awareness to `diff.ts`'s move logic: if a proposed move
     would interleave a pinned tab among unpinned ones (or vice versa) in a
     way Chrome's API will reject/clamp, detect this **before** calling
@@ -428,4 +428,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  beb634a  v0.5.1+2  Marked v0.5.1 done (already tested). Added groupId to BufferLine, 'group' to Operation, tabGroups permission; stubs in apply/diff for new variant.
 2026-07-22  d0b3fff  v0.5.3  snapshotToText groups tabs by groupId and renders ▸ Group: N sub-headers; parse skips group header lines.
 2026-07-22  a6fdb3e  v0.5.4  diff() now compares groupId between old and parsed, emitting group ops; apply() calls browser.tabs.group; parse() tracks groupId; added groupId to ParsedLine.
+2026-07-22  2836707  v0.5.5  Added validateMoveOps() in diff.ts that filters out moves violating pinned/unpinned ordering; integrated into diff() before return.
 ```
