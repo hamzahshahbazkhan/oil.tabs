@@ -2,8 +2,13 @@ import type { Snapshot, ParsedLine } from "../shared/types";
 
 const WINDOW_HEADER_RE = /^── Window (\d+) · (\d+) tabs? ──$/;
 const GROUP_HEADER_RE = /^▸ Group: (\d+)$/;
+const FOLDER_HEADER_RE = /^▸ Folder: (.+)$/;
 
-export function snapshotToText(snapshot: Snapshot): {
+export function snapshotToText(
+  snapshot: Snapshot,
+  folders?: { id: number; name: string }[],
+  tabFolderMap?: Record<number, number>,
+): {
   text: string;
   idMap: Map<number, number>;
   urlMap: Map<string, number>;
@@ -13,6 +18,11 @@ export function snapshotToText(snapshot: Snapshot): {
   const urlMap = new Map<string, number>();
   const nonEditableLines = new Set<number>();
   const lines: string[] = [];
+
+  const folderById = new Map<number, string>();
+  if (folders) {
+    for (const f of folders) folderById.set(f.id, f.name);
+  }
 
   const windowGroups = new Map<number, typeof snapshot.lines>();
   for (const tab of snapshot.lines) {
@@ -33,40 +43,66 @@ export function snapshotToText(snapshot: Snapshot): {
     lines.push(`── Window ${windowId} · ${tabs.length} ${tabs.length === 1 ? "tab" : "tabs"} ──`);
     lineNum++;
 
-    const groups = new Map<number | string, typeof tabs>();
+    const folderGroups = new Map<number | string, typeof tabs>();
     for (const tab of tabs) {
-      const key = tab.groupId ?? "__ungrouped";
-      const group = groups.get(key);
+      const folderKey = tabFolderMap && tab.tabId !== null ? tabFolderMap[tab.tabId] ?? "__nofolder" : "__nofolder";
+      const group = folderGroups.get(folderKey);
       if (group) {
         group.push(tab);
       } else {
-        groups.set(key, [tab]);
+        folderGroups.set(folderKey, [tab]);
       }
     }
 
-    const groupKeys = [...groups.keys()].sort((a, b) => {
-      if (a === "__ungrouped") return 1;
-      if (b === "__ungrouped") return -1;
+    const folderKeys = [...folderGroups.keys()].sort((a, b) => {
+      if (a === "__nofolder") return 1;
+      if (b === "__nofolder") return -1;
       return (a as number) - (b as number);
     });
 
-    for (const key of groupKeys) {
-      const groupTabs = groups.get(key)!;
-      if (key !== "__ungrouped") {
-        lines.push(`▸ Group: ${key}`);
+    for (const folderKey of folderKeys) {
+      const folderTabs = folderGroups.get(folderKey)!;
+      if (folderKey !== "__nofolder") {
+        const folderName = folderById.get(folderKey as number) ?? `Folder ${folderKey}`;
+        lines.push(`▸ Folder: ${folderName}`);
         lineNum++;
       }
 
-      for (const tab of groupTabs) {
-        lines.push(`${tab.title} — ${tab.url}`);
-        if (tab.tabId !== null) {
-          idMap.set(lineNum, tab.tabId);
-          urlMap.set(tab.url, tab.tabId);
+      const groups = new Map<number | string, typeof folderTabs>();
+      for (const tab of folderTabs) {
+        const key = tab.groupId ?? "__ungrouped";
+        const group = groups.get(key);
+        if (group) {
+          group.push(tab);
+        } else {
+          groups.set(key, [tab]);
         }
-        if (!tab.editable) {
-          nonEditableLines.add(lineNum);
+      }
+
+      const groupKeys = [...groups.keys()].sort((a, b) => {
+        if (a === "__ungrouped") return 1;
+        if (b === "__ungrouped") return -1;
+        return (a as number) - (b as number);
+      });
+
+      for (const key of groupKeys) {
+        const groupTabs = groups.get(key)!;
+        if (key !== "__ungrouped") {
+          lines.push(`▸ Group: ${key}`);
+          lineNum++;
         }
-        lineNum++;
+
+        for (const tab of groupTabs) {
+          lines.push(`${tab.title} — ${tab.url}`);
+          if (tab.tabId !== null) {
+            idMap.set(lineNum, tab.tabId);
+            urlMap.set(tab.url, tab.tabId);
+          }
+          if (!tab.editable) {
+            nonEditableLines.add(lineNum);
+          }
+          lineNum++;
+        }
       }
     }
 
@@ -86,7 +122,10 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   const textLines = text.split("\n");
   let currentWindowId = 0;
   let currentGroupId: number | null = null;
+  let currentFolderId: number | null = null;
   const seenUrl = new Set<string>();
+
+  const folders = new Map<string, number>();
 
   for (let i = 0; i < textLines.length; i++) {
     const line = textLines[i];
@@ -94,12 +133,24 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
     if (headerMatch) {
       currentWindowId = parseInt(headerMatch[1], 10);
       currentGroupId = null;
+      currentFolderId = null;
       continue;
     }
 
     const groupHeaderMatch = line.match(GROUP_HEADER_RE);
     if (groupHeaderMatch) {
       currentGroupId = Number(groupHeaderMatch[1]);
+      continue;
+    }
+
+    const folderHeaderMatch = line.match(FOLDER_HEADER_RE);
+    if (folderHeaderMatch) {
+      const name = folderHeaderMatch[1].trim();
+      if (!folders.has(name)) {
+        folders.set(name, folders.size + 1);
+      }
+      currentFolderId = folders.get(name)!;
+      currentGroupId = null;
       continue;
     }
 
@@ -115,7 +166,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
       }
     }
 
-    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId });
+    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId });
   }
 
   return result;

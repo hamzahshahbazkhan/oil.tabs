@@ -20,6 +20,7 @@ Press **Ctrl+Shift+E** to open the tab-oil buffer.
 - **Create a new tab:** type a URL on a new line, `:w` opens it
 - **Navigate a tab:** edit the URL on an existing line, `:w` updates it
 - **Tab groups:** tabs are rendered under group sub-headers; moving a line changes its group
+- **Virtual folders:** assign tabs to named folders via `▸ Folder:` headers in the buffer; folder metadata is stored locally
 - **Open tab under cursor:** press `gx` to jump to the real tab
 - **Refresh buffer:** press `gr` to discard edits and reload from live state
 - **Copy URL:** `yy` copies the URL to clipboard and the line text to vim's default register
@@ -29,7 +30,7 @@ Press **Ctrl+Shift+E** to open the tab-oil buffer.
 
 ## What is NOT yet supported
 
-- Virtual folders, saved/bookmarked tabs
+- Bookmark integration, save-for-later
 - Bulk sleep, MRU cycling
 - Custom shortcuts or keymap remapping
 

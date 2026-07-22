@@ -15,7 +15,8 @@ export type Operation =
   | { kind: "move"; tabId: number; windowId: number; index: number }
   | { kind: "create"; url: string; windowId: number; index: number }
   | { kind: "navigate"; tabId: number; url: string }
-  | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" };
+  | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" }
+  | { kind: "assignFolder"; tabId: number; folderId: number | null };
 
 export interface Snapshot {
   takenAt: number;
@@ -27,4 +28,5 @@ export interface ParsedLine {
   windowId: number;
   url: string;
   groupId: number | null;
+  folderId: number | null;
 }

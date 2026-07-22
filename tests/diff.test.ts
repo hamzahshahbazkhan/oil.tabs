@@ -19,12 +19,13 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number; p
   };
 }
 
-function makeParsed(lines: { tabId: number | null; windowId: number; url?: string; groupId?: number | null }[]): ParsedLine[] {
+function makeParsed(lines: { tabId: number | null; windowId: number; url?: string; groupId?: number | null; folderId?: number | null }[]): ParsedLine[] {
   return lines.map((l) => ({
     tabId: l.tabId,
     windowId: l.windowId,
     url: l.url ?? "https://example.com/",
     groupId: l.groupId ?? null,
+    folderId: l.folderId ?? null,
   }));
 }
 
@@ -224,5 +225,33 @@ describe("diff", () => {
     const groupOps = ops.filter((op) => op.kind === "group");
     expect(groupOps).toHaveLength(1);
     expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: "NONE" });
+  });
+
+  it("changing folderId produces assignFolder op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, folderId: 5 }]);
+    const folderMap = new Map<number, number | null>([[1, null]]);
+    const ops = diff(old, parsed, folderMap);
+    const folderOps = ops.filter((op) => op.kind === "assignFolder");
+    expect(folderOps).toHaveLength(1);
+    expect(folderOps[0]).toEqual({ kind: "assignFolder", tabId: 1, folderId: 5 });
+  });
+
+  it("no folderMap passed produces no assignFolder ops", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, folderId: 5 }]);
+    const ops = diff(old, parsed);
+    const folderOps = ops.filter((op) => op.kind === "assignFolder");
+    expect(folderOps).toHaveLength(0);
+  });
+
+  it("removing folderId produces assignFolder op with null", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, folderId: null }]);
+    const folderMap = new Map<number, number | null>([[1, 3]]);
+    const ops = diff(old, parsed, folderMap);
+    const folderOps = ops.filter((op) => op.kind === "assignFolder");
+    expect(folderOps).toHaveLength(1);
+    expect(folderOps[0]).toEqual({ kind: "assignFolder", tabId: 1, folderId: null });
   });
 });

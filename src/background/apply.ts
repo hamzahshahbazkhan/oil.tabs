@@ -37,6 +37,17 @@ export async function apply(
           }
           break;
         }
+        case "assignFolder": {
+          const { tabFolderMap } = await browser.storage.local.get("tabFolderMap");
+          const map: Record<number, number> = tabFolderMap ?? {};
+          if (op.folderId === null) {
+            delete map[op.tabId];
+          } else {
+            map[op.tabId] = op.folderId;
+          }
+          await browser.storage.local.set({ tabFolderMap: map });
+          break;
+        }
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);

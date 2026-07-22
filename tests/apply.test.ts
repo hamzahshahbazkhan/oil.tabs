@@ -5,6 +5,8 @@ const mockTabsRemove = vi.fn();
 const mockTabsMove = vi.fn();
 const mockTabsCreate = vi.fn();
 const mockTabsUpdate = vi.fn();
+const mockStorageGet = vi.fn();
+const mockStorageSet = vi.fn();
 
 vi.mock("webextension-polyfill", () => ({
   default: {
@@ -14,6 +16,12 @@ vi.mock("webextension-polyfill", () => ({
       create: (...args: unknown[]) => mockTabsCreate(...args),
       update: (...args: unknown[]) => mockTabsUpdate(...args),
     },
+    storage: {
+      local: {
+        get: (...args: unknown[]) => mockStorageGet(...args),
+        set: (...args: unknown[]) => mockStorageSet(...args),
+      },
+    },
   },
 }));
 
@@ -21,6 +29,7 @@ let apply: Awaited<typeof import("../src/background/apply")>["apply"];
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mockStorageGet.mockResolvedValue({});
   apply = (await import("../src/background/apply")).apply;
 });
 
@@ -58,6 +67,27 @@ describe("apply", () => {
     expect(result).toEqual({ ok: true });
     expect(mockTabsRemove).toHaveBeenCalledTimes(1);
     expect(mockTabsCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("assignFolder op writes to storage.local", async () => {
+    mockStorageGet.mockResolvedValueOnce({});
+    const ops: Operation[] = [
+      { kind: "assignFolder", tabId: 1, folderId: 5 },
+    ];
+    const result = await apply(ops);
+    expect(result).toEqual({ ok: true });
+    expect(mockStorageSet).toHaveBeenCalledTimes(1);
+    expect(mockStorageSet).toHaveBeenCalledWith({ tabFolderMap: { 1: 5 } });
+  });
+
+  it("assignFolder op with null folderId removes entry", async () => {
+    mockStorageGet.mockResolvedValueOnce({ tabFolderMap: { 1: 5, 2: 3 } });
+    const ops: Operation[] = [
+      { kind: "assignFolder", tabId: 1, folderId: null },
+    ];
+    const result = await apply(ops);
+    expect(result).toEqual({ ok: true });
+    expect(mockStorageSet).toHaveBeenCalledWith({ tabFolderMap: { 2: 3 } });
   });
 
   it("failure in an op returns error and stops", async () => {

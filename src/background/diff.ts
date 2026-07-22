@@ -1,6 +1,6 @@
 import type { BufferLine, Operation, ParsedLine, Snapshot } from "../shared/types";
 
-export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
+export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Map<number, number | null>): Operation[] {
   const oldById = new Map<number, BufferLine>();
   for (const line of oldSnapshot.lines) {
     if (line.tabId !== null) {
@@ -121,9 +121,21 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
+  const folderOps: Operation[] = [];
+  if (folderMap) {
+    for (const line of parsed) {
+      if (line.tabId !== null) {
+        const oldFolder = folderMap.get(line.tabId) ?? null;
+        if (oldFolder !== line.folderId) {
+          folderOps.push({ kind: "assignFolder", tabId: line.tabId, folderId: line.folderId });
+        }
+      }
+    }
+  }
+
   const validMoveOps = validateMoveOps(moveOps, oldSnapshot);
 
-  return [...closeOps, ...validMoveOps, ...createOps, ...navigateOps, ...groupOps];
+  return [...closeOps, ...validMoveOps, ...createOps, ...navigateOps, ...groupOps, ...folderOps];
 }
 
 export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {

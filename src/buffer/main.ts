@@ -5,7 +5,7 @@ import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter } fro
 import { setupVimCommands } from "./vimCommands";
 import { diff } from "../background/diff";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
-import type { BgToBuffer } from "../shared/messages";
+import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import { EditorState } from "@codemirror/state";
 import { idMap, nonEditableLines } from "./bufferState";
@@ -14,6 +14,8 @@ import { bufferDarkTheme } from "./theme";
 let view: EditorView;
 let lastSnapshot: Snapshot | null = null;
 let lastUrlMap = new Map<string, number>();
+let lastFolders: FolderInfo[] = [];
+let lastTabFolderMap: Record<number, number> = {};
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function updateStatusBar() {
@@ -23,8 +25,12 @@ function updateStatusBar() {
   let opsSummary = "";
   if (lastSnapshot) {
     const parsed = parse(text, lastUrlMap);
-    const ops = diff(lastSnapshot, parsed);
-    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0 };
+    const folderMap = new Map<number, number | null>();
+    for (const [key, val] of Object.entries(lastTabFolderMap)) {
+      folderMap.set(Number(key), val);
+    }
+    const ops = diff(lastSnapshot, parsed, folderMap);
+    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0 };
     for (const op of ops) {
       counts[op.kind]++;
     }
@@ -34,6 +40,7 @@ function updateStatusBar() {
     if (counts.move) parts.push(`${counts.move} move`);
     if (counts.navigate) parts.push(`${counts.navigate} nav`);
     if (counts.group) parts.push(`${counts.group} group`);
+    if (counts.assignFolder) parts.push(`${counts.assignFolder} folder`);
     opsSummary = parts.length ? ` │ ${parts.join(" · ")}` : "";
   }
   const el = document.getElementById("statusbar");
@@ -109,13 +116,13 @@ function init() {
       switch (message.type) {
         case "SNAPSHOT":
           hideStaleBanner();
-          renderSnapshot(message.snapshot);
+          renderSnapshot(message.snapshot, message.folders, message.tabFolderMap);
           updateStatusBar();
           break;
         case "APPLY_RESULT":
           if (message.ok) {
             hideStaleBanner();
-            renderSnapshot(message.snapshot);
+            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap);
             updateStatusBar();
           } else {
             alert(`tab-oil error: ${message.error}`);
@@ -134,9 +141,11 @@ function init() {
   }
 }
 
-function renderSnapshot(snapshot: Snapshot): void {
+function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>): void {
   lastSnapshot = snapshot;
-  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot);
+  lastFolders = folders ?? [];
+  lastTabFolderMap = tabFolderMap ?? {};
+  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap);
   lastUrlMap = urlMap;
   idMap.clear();
   for (const [k, v] of newIdMap) {

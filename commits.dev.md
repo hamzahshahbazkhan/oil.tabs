@@ -272,7 +272,7 @@ _(Full design reference: see `tab-oil-architecture.md` §9b if available in
 this repo/workspace. If that file isn't present, the task descriptions
 below are self-contained enough to proceed without it.)_
 
-- [ ] **v0.6.1 — Storage schema for folders + saved items**
+- [x] **v0.6.1 — Storage schema for folders + saved items**
   - Add `bookmarks` permission to `manifest.json`.
   - Create `src/shared/storageSchema.ts` with `VirtualFolder`,
     `SavedItem`, and the `ExtensionStorage`/`UserSettings` shapes (folders,
@@ -433,4 +433,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  b4158fe  feat  Dark Tokyo Night theme, auto-focus, yy yanks to vim register, J/K swap, :tab search command, normalizeUrl/extractTitle, seenUrl dedup, improved status bar counts.
 2026-07-22  861115d  test  v0.3.6 empty commit — manual verification needed: load unpacked, `o` new line with URL, `:w`, confirm a real new tab opens at right window/position.
 2026-07-22  d36f6eb  test  v0.3.7 empty commit — manual verification needed: edit URL on existing line, `:w`, confirm that real tab navigates (not a new tab).
+2026-07-22  4c65ca9  feat  v0.6.1 Added bookmarks permission; created storageSchema.ts with VirtualFolder, SavedItem, UserSettings, ExtensionStorage interfaces.
 ```
