@@ -23,6 +23,20 @@ export function setupVimCommands(
 
   Vim.mapCommand("gx", "action", "focusTab");
 
+  view.dom.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.key !== "Enter") return;
+    const vimState = Vim.getVimState(view);
+    if (vimState.mode !== "normal") return;
+    e.preventDefault();
+    e.stopPropagation();
+    const cursor = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(cursor);
+    const tabId = idMap.get(line.number);
+    if (tabId !== undefined) {
+      focusTab(tabId);
+    }
+  });
+
   Vim.defineAction("refresh", () => {
     browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
   });
@@ -98,6 +112,11 @@ export function setupVimCommands(
 
   Vim.mapCommand("J", "action", "moveLineDown");
   Vim.mapCommand("K", "action", "moveLineUp");
+
+  Vim.defineAction("closeBuffer", () => {
+    window.close();
+  });
+  Vim.mapCommand("-", "action", "closeBuffer", { context: "normal" });
 
   Vim.defineEx("cnext", "cn", () => {
     browser.runtime.sendMessage({ type: "CYCLE_NEXT" });

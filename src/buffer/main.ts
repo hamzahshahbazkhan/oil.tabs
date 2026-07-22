@@ -85,10 +85,12 @@ function save(force: boolean) {
       `This will close ${closeCount} tabs. Continue?`,
     );
     if (!ok) return;
+    view.focus();
   }
 
   dirty = false;
   browser.runtime.sendMessage({ type: "SAVE", text });
+  view.focus();
 }
 
 function focusTab(tabId: number) {
@@ -157,13 +159,15 @@ function init() {
 }
 
 function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
-  dirty = false;
   lastSnapshot = snapshot;
   lastFolders = folders ?? [];
   lastTabFolderMap = tabFolderMap ?? {};
   lastSavedItems = savedItems ?? [];
   const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
   lastUrlMap = urlMap;
+
+  const prevCursor = view.state.selection.main.head;
+
   idMap.clear();
   for (const [k, v] of newIdMap) {
     idMap.set(k, v);
@@ -179,6 +183,14 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
       insert: text,
     },
   });
+  dirty = false;
+
+  const newPos = Math.min(prevCursor, Math.max(0, view.state.doc.length - 1));
+  view.dispatch({
+    selection: { anchor: newPos },
+    scrollIntoView: true,
+  });
+  view.focus();
 }
 
 if (document.readyState === "loading") {

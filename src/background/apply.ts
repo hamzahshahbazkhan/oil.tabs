@@ -26,6 +26,7 @@ export async function apply(
             windowId: op.windowId,
             url: op.url,
             index: op.index,
+            active: false,
           });
           break;
         case "navigate":

@@ -168,6 +168,11 @@ browser.runtime.onMessage.addListener(
         const savedUrls = new Set(currentSaved.map((item: SavedItem) => item.url));
         const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
         const result = await apply(ops);
+        try {
+          await browser.tabs.update(sender.tab!.id!, { active: true });
+        } catch {
+          // Buffer tab may have closed
+        }
         const freshSnapshot = await takeSnapshot();
         const { urlMap: freshUrlMap } = snapshotToText(freshSnapshot);
         lastSnapshot = freshSnapshot;
