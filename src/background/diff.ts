@@ -58,7 +58,6 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  // Determine which tabs changed window
   const oldWindowOf = new Map<number, number>();
   for (const line of oldSnapshot.lines) {
     if (line.tabId !== null) {
@@ -68,7 +67,6 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
 
   const moveOps: Operation[] = [];
 
-  // Handle cross-window moves first
   for (const [windowId, tabIds] of newOrder) {
     for (const tabId of tabIds) {
       const oldWid = oldWindowOf.get(tabId);
@@ -79,13 +77,11 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[]): Operation[] {
     }
   }
 
-  // For same-window reordering, use LCS
   const allWindowIds = new Set([...oldOrder.keys(), ...newOrder.keys()]);
   for (const windowId of allWindowIds) {
     const oldArr = oldOrder.get(windowId) ?? [];
     const newArr = newOrder.get(windowId) ?? [];
 
-    // Filter out cross-window moved tabs from LCS computation
     const crossWindowMoved = new Set(
       moveOps.filter((op): op is { kind: "move"; tabId: number; windowId: number; index: number } => op.kind === "move" && oldWindowOf.get(op.tabId) === windowId).map((op) => op.tabId)
     );
@@ -149,7 +145,6 @@ export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Opera
     if (op.kind !== "move") return false;
     const isPinned = pinnedByTab.get(op.tabId) ?? false;
     const pinnedCount = perWindowPinnedCount.get(op.windowId) ?? 0;
-    // Pinned tabs must stay in [0, pinnedCount), unpinned in [pinnedCount, ...)
     if (isPinned && op.index >= pinnedCount) return false;
     if (!isPinned && op.index < pinnedCount) return false;
     return true;

@@ -86,6 +86,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   const textLines = text.split("\n");
   let currentWindowId = 0;
   let currentGroupId: number | null = null;
+  const seenUrl = new Set<string>();
 
   for (let i = 0; i < textLines.length; i++) {
     const line = textLines[i];
@@ -105,7 +106,14 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
     if (line.trim() === "") continue;
 
     const url = extractUrl(line);
-    const tabId = urlMap.get(url) ?? null;
+    let tabId = urlMap.get(url) ?? null;
+    if (tabId !== null) {
+      if (seenUrl.has(url)) {
+        tabId = null;
+      } else {
+        seenUrl.add(url);
+      }
+    }
 
     result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId });
   }
@@ -113,8 +121,22 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   return result;
 }
 
+export function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return trimmed;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) return trimmed;
+  if (/\s/.test(trimmed)) return trimmed;
+  return "https://" + trimmed;
+}
+
 export function extractUrl(line: string): string {
-  const sepIndex = line.indexOf(" — ");
-  if (sepIndex === -1) return line.trim();
-  return line.slice(sepIndex + 3).trim();
+  const sepIndex = line.lastIndexOf(" — ");
+  const raw = sepIndex === -1 ? line.trim() : line.slice(sepIndex + 3).trim();
+  return normalizeUrl(raw);
+}
+
+export function extractTitle(line: string): string {
+  const sepIndex = line.lastIndexOf(" — ");
+  if (sepIndex === -1) return "";
+  return line.slice(0, sepIndex).trim();
 }
