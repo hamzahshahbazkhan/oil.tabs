@@ -27,8 +27,11 @@ export async function apply(
         case "navigate":
           await browser.tabs.update(op.tabId, { url: op.url });
           break;
-        case "group":
-          throw new Error("group not yet implemented");
+        case "group": {
+          const groupId = op.groupId === "NONE" ? -1 : op.groupId;
+          await browser.tabs.group({ tabIds: [op.tabId], groupId });
+          break;
+        }
         default: {
           const _exhaustive: never = op;
           throw new Error(`Unknown operation kind: ${(_exhaustive as any).kind}`);

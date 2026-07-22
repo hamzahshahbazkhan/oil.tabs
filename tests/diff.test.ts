@@ -19,11 +19,12 @@ function makeSnapshot(lines: { tabId: number; windowId: number; index: number }[
   };
 }
 
-function makeParsed(lines: { tabId: number | null; windowId: number; url?: string }[]): ParsedLine[] {
+function makeParsed(lines: { tabId: number | null; windowId: number; url?: string; groupId?: number | null }[]): ParsedLine[] {
   return lines.map((l) => ({
     tabId: l.tabId,
     windowId: l.windowId,
     url: l.url ?? "https://example.com/",
+    groupId: l.groupId ?? null,
   }));
 }
 
@@ -180,5 +181,27 @@ describe("diff", () => {
     const moveIdx = kinds.indexOf("move");
     expect(closeIdx).toBeLessThan(moveIdx);
     expect(moveIdx).toBeLessThan(createIdx);
+  });
+
+  it("changing groupId produces one group op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, groupId: 5 }]);
+    const ops = diff(old, parsed);
+    const groupOps = ops.filter((op) => op.kind === "group");
+    expect(groupOps).toHaveLength(1);
+    expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: 5 });
+  });
+
+  it("removing groupId produces NONE group op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const oldWithGroup = {
+      ...old,
+      lines: old.lines.map((l) => ({ ...l, groupId: 3 })),
+    };
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, groupId: null }]);
+    const ops = diff(oldWithGroup, parsed);
+    const groupOps = ops.filter((op) => op.kind === "group");
+    expect(groupOps).toHaveLength(1);
+    expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: "NONE" });
   });
 });

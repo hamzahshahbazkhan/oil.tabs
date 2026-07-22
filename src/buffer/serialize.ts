@@ -85,17 +85,20 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
   const result: ParsedLine[] = [];
   const textLines = text.split("\n");
   let currentWindowId = 0;
+  let currentGroupId: number | null = null;
 
   for (let i = 0; i < textLines.length; i++) {
     const line = textLines[i];
     const headerMatch = line.match(WINDOW_HEADER_RE);
     if (headerMatch) {
       currentWindowId = parseInt(headerMatch[1], 10);
+      currentGroupId = null;
       continue;
     }
 
     const groupHeaderMatch = line.match(GROUP_HEADER_RE);
     if (groupHeaderMatch) {
+      currentGroupId = Number(groupHeaderMatch[1]);
       continue;
     }
 
@@ -104,7 +107,7 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
     const url = extractUrl(line);
     const tabId = urlMap.get(url) ?? null;
 
-    result.push({ tabId, windowId: currentWindowId, url });
+    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId });
   }
 
   return result;

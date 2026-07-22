@@ -26,4 +26,5 @@ export interface ParsedLine {
   tabId: number | null;
   windowId: number;
   url: string;
+  groupId: number | null;
 }
