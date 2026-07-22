@@ -241,7 +241,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     renders as a labeled sub-section.
   - Commit message: `feat(buffer): render tab groups as sub-sections`
 
-- [ ] **v0.5.4 — `diff()` + `apply()` handle group changes**
+- [x] **v0.5.4 — `diff()` + `apply()` handle group changes**
   - `diff.ts`: if a parsed line's target group differs from its original,
     emit a `group` op.
   - `apply.ts`: `group` → `browser.tabs.group({tabIds:[tabId], groupId})` for
@@ -427,4 +427,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  2bd948f  v0.4.5  snapshotToText now returns nonEditableLines set; buffer renders them dimmed and blocks changes via transactionFilter.
 2026-07-22  beb634a  v0.5.1+2  Marked v0.5.1 done (already tested). Added groupId to BufferLine, 'group' to Operation, tabGroups permission; stubs in apply/diff for new variant.
 2026-07-22  d0b3fff  v0.5.3  snapshotToText groups tabs by groupId and renders ▸ Group: N sub-headers; parse skips group header lines.
+2026-07-22  a6fdb3e  v0.5.4  diff() now compares groupId between old and parsed, emitting group ops; apply() calls browser.tabs.group; parse() tracks groupId; added groupId to ParsedLine.
 ```
