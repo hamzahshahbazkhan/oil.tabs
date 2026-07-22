@@ -175,7 +175,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     becomes focused/active in the browser, buffer stays open.
   - Commit message: `feat(buffer): add gx to jump to tab under cursor`
 
-- [ ] **v0.4.2 — `gr`: refresh/discard local edits**
+- [x] **v0.4.2 — `gr`: refresh/discard local edits**
   - Register a `Vim.defineAction` mapped to `gr` that sends
     `{type:'REQUEST_SNAPSHOT'}` and, on response, replaces the entire buffer
     doc with the freshly serialized text (discarding whatever was typed).
@@ -421,4 +421,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  7c9072d  v0.3.8  Added fixed bottom status bar to buffer.html; debounced live parse+diff update on every doc change; clears on successful :w.
 2026-07-22  5290cd6  v0.3.9  Added LARGE_DIFF_THRESHOLD constant and confirm dialog before SAVE when close count exceeds threshold; added :w! bypass.
 2026-07-22  f70a725  v0.4.1  Added gx mapping to focus tab under cursor; created bufferState.ts shared idMap; background FOCUS_TAB now also focuses the window.
+2026-07-22  f9c8a95  v0.4.2  Added gr mapping that sends REQUEST_SNAPSHOT; existing SNAPSHOT handler replaces buffer, discarding edits.
 ```
