@@ -40,6 +40,16 @@ function scheduleStatusUpdate() {
   statusDebounceTimer = setTimeout(updateStatusBar, 150);
 }
 
+function showStaleBanner() {
+  const el = document.getElementById("staleBanner");
+  if (el) el.style.display = "";
+}
+
+function hideStaleBanner() {
+  const el = document.getElementById("staleBanner");
+  if (el) el.style.display = "none";
+}
+
 function save(force: boolean) {
   if (!lastSnapshot) return;
   const text = view.state.doc.toString();
@@ -86,10 +96,12 @@ function init() {
     chrome.runtime.onMessage.addListener((message: BgToBuffer) => {
       switch (message.type) {
         case "SNAPSHOT":
+          hideStaleBanner();
           renderSnapshot(message.snapshot);
           break;
         case "APPLY_RESULT":
           if (message.ok) {
+            hideStaleBanner();
             renderSnapshot(message.snapshot);
             const el = document.getElementById("statusbar");
             if (el) el.textContent = "";
@@ -98,7 +110,7 @@ function init() {
           }
           break;
         case "STALE_WARNING":
-          console.warn("tab-oil: snapshot may be stale");
+          showStaleBanner();
           break;
       }
     });

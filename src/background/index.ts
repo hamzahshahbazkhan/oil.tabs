@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab } from "./bufferWindow";
+import { openOrFocusBufferTab, getBufferTabId } from "./bufferWindow";
 import { takeSnapshot } from "./snapshot";
 import type { Snapshot } from "../shared/types";
 import type { BgToBuffer, BufferToBg } from "../shared/messages";
@@ -9,6 +9,21 @@ import { apply } from "./apply";
 
 let lastSnapshot: Snapshot | null = null;
 let currentUrlMap: Map<string, number> | null = null;
+
+async function sendStaleWarning(): Promise<void> {
+  const tabId = await getBufferTabId();
+  if (tabId === undefined) return;
+  try {
+    await browser.tabs.sendMessage(tabId, { type: "STALE_WARNING" });
+  } catch {
+    // Buffer tab may not be open
+  }
+}
+
+browser.tabs.onRemoved.addListener(() => { sendStaleWarning(); });
+browser.tabs.onCreated.addListener(() => { sendStaleWarning(); });
+browser.tabs.onMoved.addListener(() => { sendStaleWarning(); });
+browser.tabs.onUpdated.addListener(() => { sendStaleWarning(); });
 
 browser.commands.onCommand.addListener(async (command) => {
   if (command === "toggle-tab-buffer") {
