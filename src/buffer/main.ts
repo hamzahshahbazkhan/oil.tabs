@@ -219,6 +219,9 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   }
 
   const prevCursor = view.state.selection.main.head;
+  const prevLine = view.state.doc.lineAt(prevCursor);
+  const prevTabId = idMap.get(prevLine.number);
+
   view.dispatch({
     changes: {
       from: 0,
@@ -228,7 +231,23 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   });
   dirty = false;
 
-  const newPos = Math.min(prevCursor, Math.max(0, view.state.doc.length - 1));
+  let newPos: number;
+  if (prevTabId !== undefined) {
+    let found = false;
+    for (let i = 1; i <= view.state.doc.lines; i++) {
+      if (idMap.get(i) === prevTabId) {
+        newPos = view.state.doc.line(i).from;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      newPos = Math.min(prevCursor, Math.max(0, view.state.doc.length - 1));
+    }
+  } else {
+    newPos = Math.min(prevCursor, Math.max(0, view.state.doc.length - 1));
+  }
+
   view.dispatch({
     selection: { anchor: newPos },
     scrollIntoView: true,
