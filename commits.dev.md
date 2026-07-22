@@ -233,7 +233,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
   - Verify: `npm run build` compiles.
   - Commit message: `feat(types): add tab group support to types and manifest`
 
-- [ ] **v0.5.3 — Render tab groups as sub-sections**
+- [x] **v0.5.3 — Render tab groups as sub-sections**
   - In `snapshot.ts`, populate `groupId` from `browser.tabs.query` results.
   - In `serialize.ts`, render a sub-header per group within a window (e.g.
     `▸ Group: Work`), ungrouped tabs need no sub-header.
@@ -426,4 +426,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  1a1c554  v0.4.4  Added tab event listeners in background that send STALE_WARNING to buffer tab; buffer shows/hides a non-blocking banner.
 2026-07-22  2bd948f  v0.4.5  snapshotToText now returns nonEditableLines set; buffer renders them dimmed and blocks changes via transactionFilter.
 2026-07-22  beb634a  v0.5.1+2  Marked v0.5.1 done (already tested). Added groupId to BufferLine, 'group' to Operation, tabGroups permission; stubs in apply/diff for new variant.
+2026-07-22  d0b3fff  v0.5.3  snapshotToText groups tabs by groupId and renders ▸ Group: N sub-headers; parse skips group header lines.
 ```
