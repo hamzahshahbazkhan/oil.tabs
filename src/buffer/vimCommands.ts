@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
-import { Vim } from "@replit/codemirror-vim";
+import { Vim, getCM } from "@replit/codemirror-vim";
 import { idMap, nonEditableLines } from "./bufferState";
 import { extractUrl, extractTitle } from "./serialize";
 
@@ -25,8 +25,9 @@ export function setupVimCommands(
 
   view.dom.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key !== "Enter") return;
-    const vimState = Vim.getVimState(view);
-    if (vimState.mode !== "normal") return;
+    const cm = getCM(view);
+    const vim = cm?.state?.vim;
+    if (!vim || vim.insertMode || vim.visualMode) return;
     e.preventDefault();
     e.stopPropagation();
     const cursor = view.state.selection.main.head;
