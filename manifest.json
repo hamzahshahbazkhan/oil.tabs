@@ -8,11 +8,17 @@
     "service_worker": "src/background/index.ts",
     "type": "module"
   },
+  "options_page": "options.html",
   "commands": {
     "toggle-tab-buffer": {
       "suggested_key": { "default": "Ctrl+Shift+E" },
       "description": "Open the tab-oil buffer"
-    }
+    },
+    "shortcut-0": { "description": "Global shortcut 0" },
+    "shortcut-1": { "description": "Global shortcut 1" },
+    "shortcut-2": { "description": "Global shortcut 2" },
+    "shortcut-3": { "description": "Global shortcut 3" },
+    "shortcut-4": { "description": "Global shortcut 4" }
   },
   "action": { "default_title": "tab-oil" }
 }

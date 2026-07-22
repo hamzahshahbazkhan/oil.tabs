@@ -23,6 +23,7 @@ Press **Ctrl+Shift+E** to open the tab-oil buffer.
 - **Virtual folders:** assign tabs to named folders via `▸ Folder:` headers in the buffer; folder metadata is stored locally
 - **Bulk sleep (discard):** visual-select tab lines then `:sleep` to discard (free memory); discarded tabs show a `[sleep]` prefix
 - **Save for later:** move a tab's line to the `── Saved For Later` section at the bottom of the buffer, then `:w` — the real tab closes and its URL is saved locally; move a saved line back to a live window to restore it
+- **Global shortcuts:** configure up to 5 keyboard shortcuts on the options page (right-click extension icon → Options) to focus or open specific URLs
 - **Open tab under cursor:** press `gx` to jump to the real tab
 - **Refresh buffer:** press `gr` to discard edits and reload from live state
 - **Copy URL:** `yy` copies the URL to clipboard and the line text to vim's default register

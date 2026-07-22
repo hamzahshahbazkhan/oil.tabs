@@ -27,6 +27,19 @@ async function loadSavedItems(): Promise<SavedItem[]> {
   return (savedForLater ?? []) as SavedItem[];
 }
 
+async function focusOrOpen(url: string): Promise<void> {
+  const tabs = await browser.tabs.query({ url });
+  if (tabs.length > 0) {
+    const tab = tabs[0];
+    await browser.tabs.update(tab.id!, { active: true });
+    if (tab.windowId) {
+      await browser.windows.update(tab.windowId, { focused: true });
+    }
+  } else {
+    await browser.tabs.create({ url });
+  }
+}
+
 async function sendStaleWarning(): Promise<void> {
   const tabId = await getBufferTabId();
   if (tabId === undefined) return;
@@ -49,6 +62,17 @@ browser.commands.onCommand.addListener(async (command) => {
     const { urlMap } = snapshotToText(snapshot);
     lastSnapshot = snapshot;
     currentUrlMap = urlMap;
+    return;
+  }
+
+  const match = command.match(/^shortcut-(\d)$/);
+  if (match) {
+    const idx = Number(match[1]);
+    const { globalShortcuts } = await browser.storage.sync.get("globalShortcuts");
+    const shortcuts: { key: string; url: string }[] = globalShortcuts ?? [];
+    if (idx < shortcuts.length && shortcuts[idx].url) {
+      await focusOrOpen(shortcuts[idx].url);
+    }
   }
 });
 

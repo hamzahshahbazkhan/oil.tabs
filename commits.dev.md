@@ -308,7 +308,7 @@ below are self-contained enough to proceed without it.)_
     or task manager) and no others are affected.
   - Commit message: `feat(buffer): add bulk tab sleep via visual mode`
 
-- [ ] **v0.6.4 — Save for later + real bookmarks**
+- [x] **v0.6.4 — Save for later + real bookmarks**
   - Add `bookmark` and `saveForLater` to `Operation`.
   - `apply.ts`: `bookmark` → `browser.bookmarks.create` then close;
     `saveForLater` → append to `browser.storage.local`'s `savedForLater`
@@ -436,4 +436,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  4c65ca9  feat  v0.6.1 Added bookmarks permission; created storageSchema.ts with VirtualFolder, SavedItem, UserSettings, ExtensionStorage interfaces.
 2026-07-22  6e293bb  feat  v0.6.2 Added assignFolder to Operation, folderId to ParsedLine; snapshotToText renders folder headers; parse detects folder headers; diff detects folder reassignment; apply writes folder assignments to storage.local; folder data threaded through snapshot pipeline; 3 new diff tests + 2 new apply tests.
 2026-07-22  8ee17ae  feat  v0.6.3 Added discard to Operation; :sleep Ex command in vimCommands uses visual selection range; DISCARD_TABS message type; background handler calls tabs.discard; snapshotToText marks discarded tab titles with [sleep] prefix; apply test for discard op.
+2026-07-22  8ab7c48  feat  v0.6.4 Added saveForLater/bookmark/restoreFromSaved to Operation; saved field to ParsedLine; snapshotToText renders a "── Saved For Later" section; parse detects saved section; diff emits saveForLater/restoreFromSaved ops; apply handles all three; saved items threaded through snapshot pipeline; 4 new diff tests, 2 new apply tests, 1 new serialize test.
 ```
