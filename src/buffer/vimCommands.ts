@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
-import { Vim, getCM } from "@replit/codemirror-vim";
+import { Vim } from "@replit/codemirror-vim";
 import { idMap, nonEditableLines } from "./bufferState";
 import { extractUrl, extractTitle } from "./serialize";
 
@@ -22,21 +22,6 @@ export function setupVimCommands(
   });
 
   Vim.mapCommand("gx", "action", "focusTab");
-
-  view.dom.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key !== "Enter") return;
-    const cm = getCM(view);
-    const vim = cm?.state?.vim;
-    if (!vim || vim.insertMode || vim.visualMode) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const cursor = view.state.selection.main.head;
-    const line = view.state.doc.lineAt(cursor);
-    const tabId = idMap.get(line.number);
-    if (tabId !== undefined) {
-      focusTab(tabId);
-    }
-  });
 
   Vim.defineAction("refresh", () => {
     browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });

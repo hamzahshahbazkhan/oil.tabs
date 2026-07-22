@@ -1,6 +1,8 @@
 import browser from "webextension-polyfill";
 import { EditorView, basicSetup } from "codemirror";
-import { vim } from "@replit/codemirror-vim";
+import { keymap } from "@codemirror/view";
+import { vim, getCM } from "@replit/codemirror-vim";
+import { Prec, EditorState } from "@codemirror/state";
 import { snapshotToText, parse } from "./serialize";
 import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
@@ -9,7 +11,6 @@ import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
-import { EditorState } from "@codemirror/state";
 import { idMap, nonEditableLines } from "./bufferState";
 import { bufferDarkTheme } from "./theme";
 
@@ -21,6 +22,8 @@ let lastTabFolderMap: Record<number, number> = {};
 let lastSavedItems: SavedItem[] = [];
 let dirty = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastRefresh = 0;
+const REFRESH_COOLDOWN = 2000;
 
 function updateStatusBar() {
   const text = view.state.doc.toString();
@@ -116,6 +119,37 @@ function init() {
           nonEditableLineDeco,
           nonEditableTransactionFilter,
           statusListener,
+          Prec.highest(keymap.of([
+            {
+              key: "Enter",
+              run: (v: EditorView) => {
+                const cm = getCM(v);
+                const vs = cm?.state?.vim;
+                if (!vs || vs.insertMode || vs.visualMode) return false;
+                const cursor = v.state.selection.main.head;
+                const line = v.state.doc.lineAt(cursor);
+                const tabId = idMap.get(line.number);
+                if (tabId !== undefined) {
+                  browser.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
+                  return true;
+                }
+                return false;
+              },
+            },
+            {
+              key: "Ctrl-Enter",
+              run: (v: EditorView) => {
+                const cursor = v.state.selection.main.head;
+                const line = v.state.doc.lineAt(cursor);
+                const tabId = idMap.get(line.number);
+                if (tabId !== undefined) {
+                  browser.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
+                  return true;
+                }
+                return false;
+              },
+            },
+          ])),
         ],
       }),
       parent: document.getElementById("editor")!,
@@ -143,7 +177,11 @@ function init() {
           break;
         case "STALE_WARNING":
           if (!dirty) {
-            browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+            const now = Date.now();
+            if (now - lastRefresh > REFRESH_COOLDOWN) {
+              lastRefresh = now;
+              browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+            }
           } else {
             showStaleBanner();
           }
@@ -166,8 +204,6 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
   lastUrlMap = urlMap;
 
-  const prevCursor = view.state.selection.main.head;
-
   idMap.clear();
   for (const [k, v] of newIdMap) {
     idMap.set(k, v);
@@ -176,6 +212,13 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   for (const v of newNonEditable) {
     nonEditableLines.add(v);
   }
+
+  if (text === view.state.doc.toString()) {
+    dirty = false;
+    return;
+  }
+
+  const prevCursor = view.state.selection.main.head;
   view.dispatch({
     changes: {
       from: 0,
