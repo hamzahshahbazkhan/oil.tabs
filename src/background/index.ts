@@ -69,6 +69,10 @@ browser.runtime.onMessage.addListener(
 
       case "FOCUS_TAB": {
         await browser.tabs.update(message.tabId, { active: true });
+        const tab = await browser.tabs.get(message.tabId);
+        if (tab.windowId) {
+          await browser.windows.update(tab.windowId, { focused: true });
+        }
         break;
       }
 

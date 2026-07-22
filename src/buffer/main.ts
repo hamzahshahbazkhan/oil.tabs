@@ -8,6 +8,7 @@ import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import { EditorState } from "@codemirror/state";
+import { idMap } from "./bufferState";
 
 let view: EditorView;
 let lastSnapshot: Snapshot | null = null;
@@ -56,6 +57,10 @@ function save(force: boolean) {
   chrome.runtime.sendMessage({ type: "SAVE", text });
 }
 
+function focusTab(tabId: number) {
+  chrome.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
+}
+
 function init() {
   try {
     const statusListener = EditorView.updateListener.of((update) => {
@@ -76,7 +81,7 @@ function init() {
       parent: document.getElementById("editor")!,
     });
 
-    setupVimCommands(view, save);
+    setupVimCommands(view, save, focusTab);
 
     chrome.runtime.onMessage.addListener((message: BgToBuffer) => {
       switch (message.type) {
@@ -107,8 +112,12 @@ function init() {
 
 function renderSnapshot(snapshot: Snapshot): void {
   lastSnapshot = snapshot;
-  const { text, urlMap } = snapshotToText(snapshot);
+  const { text, urlMap, idMap: newIdMap } = snapshotToText(snapshot);
   lastUrlMap = urlMap;
+  idMap.clear();
+  for (const [k, v] of newIdMap) {
+    idMap.set(k, v);
+  }
   view.dispatch({
     changes: {
       from: 0,
