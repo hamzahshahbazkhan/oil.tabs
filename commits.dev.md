@@ -336,7 +336,7 @@ below are self-contained enough to proceed without it.)_
     (confirm second press focuses the existing tab, doesn't duplicate).
   - Commit message: `feat(shortcuts): add configurable global focus-or-open shortcuts`
 
-- [ ] **v0.6.6 — MRU tab cycling**
+- [x] **v0.6.6 — MRU tab cycling**
   - In background: maintain an MRU tabId array via `browser.tabs.onActivated`,
     capped length (50), persisted to `browser.storage.local` so it survives
     service-worker restarts.
@@ -438,4 +438,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  8ee17ae  feat  v0.6.3 Added discard to Operation; :sleep Ex command in vimCommands uses visual selection range; DISCARD_TABS message type; background handler calls tabs.discard; snapshotToText marks discarded tab titles with [sleep] prefix; apply test for discard op.
 2026-07-22  8ab7c48  feat  v0.6.4 Added saveForLater/bookmark/restoreFromSaved to Operation; saved field to ParsedLine; snapshotToText renders a "── Saved For Later" section; parse detects saved section; diff emits saveForLater/restoreFromSaved ops; apply handles all three; saved items threaded through snapshot pipeline; 4 new diff tests, 2 new apply tests, 1 new serialize test.
 2026-07-22  a51c4eb  feat  v0.6.5 Added options_page to manifest; options.html with table UI for configuring up to 5 global keyboard shortcuts; src/options/main.ts manages sync-stored shortcuts; background focusOrOpen queries tabs by URL and focuses or creates; 5 shortcut-0..4 commands registered in manifest for user assignment.
+2026-07-22  ed7e5c8  feat  v0.6.6 MRU tabId array maintained via tabs.onActivated listener, capped at 50, persisted to storage.local; cycleTab function (next/prev) in background; CYCLE_NEXT/CYCLE_PREV message types; :cnext/:cprev buffer Ex commands; options page extended with cycleNext/cyclePrev action types; GlobalShortcut type added to storageSchema.
 ```

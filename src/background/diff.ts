@@ -150,7 +150,7 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
   }
   if (savedUrls) {
     for (const line of parsed) {
-      if (!line.saved && savedUrls.has(line.url)) {
+      if (!line.saved && line.tabId === null && savedUrls.has(line.url)) {
         saveRestoreOps.push({ kind: "restoreFromSaved", url: line.url, title: "", windowId: line.windowId, index: 0 });
       }
     }

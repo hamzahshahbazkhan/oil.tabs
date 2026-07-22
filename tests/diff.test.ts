@@ -266,14 +266,23 @@ describe("diff", () => {
     expect(saveOps[0]).toEqual({ kind: "saveForLater", tabId: 0, url: "https://saved.com/", title: "" });
   });
 
-  it("live line matching saved URL produces restoreFromSaved op", () => {
-    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
-    const parsed = makeParsed([{ tabId: 1, windowId: 1, url: "https://saved.com/" }]);
+  it("live line with null tabId matching saved URL produces restoreFromSaved op", () => {
+    const old = makeSnapshot([]);
+    const parsed = makeParsed([{ tabId: null, windowId: 1, url: "https://saved.com/" }]);
     const savedUrls = new Set(["https://saved.com/"]);
     const ops = diff(old, parsed, undefined, savedUrls);
     const restoreOps = ops.filter((op) => op.kind === "restoreFromSaved");
     expect(restoreOps).toHaveLength(1);
     expect(restoreOps[0]).toEqual({ kind: "restoreFromSaved", url: "https://saved.com/", title: "", windowId: 1, index: 0 });
+  });
+
+  it("live line with existing tabId matching saved URL does not produce restoreFromSaved op", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, url: "https://saved.com/" }]);
+    const savedUrls = new Set(["https://saved.com/"]);
+    const ops = diff(old, parsed, undefined, savedUrls);
+    const restoreOps = ops.filter((op) => op.kind === "restoreFromSaved");
+    expect(restoreOps).toHaveLength(0);
   });
 
   it("saved section tabIds are not counted as closeOps", () => {
