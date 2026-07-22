@@ -429,4 +429,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  d0b3fff  v0.5.3  snapshotToText groups tabs by groupId and renders ▸ Group: N sub-headers; parse skips group header lines.
 2026-07-22  a6fdb3e  v0.5.4  diff() now compares groupId between old and parsed, emitting group ops; apply() calls browser.tabs.group; parse() tracks groupId; added groupId to ParsedLine.
 2026-07-22  2836707  v0.5.5  Added validateMoveOps() in diff.ts that filters out moves violating pinned/unpinned ordering; integrated into diff() before return.
+2026-07-22  d7ecf18  fix  Fixed 4 bugs: GROUP_HEADER_RE now captures only the group number (was capturing "Group: N" → NaN); snapshot.ts groupId extraction handles ID 0 correctly; apply.ts group case chains NEW/NONE/number; nonEditable filter bounds-checks lineNo against doc length.
 ```
