@@ -1,21 +1,60 @@
 import { EditorView, basicSetup } from "codemirror";
 import { vim } from "@replit/codemirror-vim";
-import { snapshotToText } from "./serialize";
+import { snapshotToText, parse } from "./serialize";
 import { headerLineDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
+import { diff } from "../background/diff";
 import type { BgToBuffer } from "../shared/messages";
-import type { Snapshot } from "../shared/types";
+import type { Operation, Snapshot } from "../shared/types";
+import { EditorState } from "@codemirror/state";
 
 let view: EditorView;
+let lastSnapshot: Snapshot | null = null;
+let lastUrlMap = new Map<string, number>();
+let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function updateStatusBar() {
+  if (!lastSnapshot) return;
+  const text = view.state.doc.toString();
+  const parsed = parse(text, lastUrlMap);
+  const ops = diff(lastSnapshot, parsed);
+  const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0 };
+  for (const op of ops) {
+    counts[op.kind]++;
+  }
+  const parts: string[] = [];
+  if (counts.close) parts.push(`${counts.close} to close`);
+  if (counts.create) parts.push(`${counts.create} to create`);
+  if (counts.move) parts.push(`${counts.move} to move`);
+  if (counts.navigate) parts.push(`${counts.navigate} to navigate`);
+  const el = document.getElementById("statusbar");
+  if (el) {
+    el.textContent = parts.length ? parts.join(" · ") : "";
+  }
+}
+
+function scheduleStatusUpdate() {
+  if (statusDebounceTimer) clearTimeout(statusDebounceTimer);
+  statusDebounceTimer = setTimeout(updateStatusBar, 150);
+}
 
 function init() {
   try {
+    const statusListener = EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        scheduleStatusUpdate();
+      }
+    });
+
     view = new EditorView({
-      extensions: [
-        basicSetup,
-        vim(),
-        headerLineDeco,
-      ],
+      state: EditorState.create({
+        extensions: [
+          basicSetup,
+          vim(),
+          headerLineDeco,
+          statusListener,
+        ],
+      }),
       parent: document.getElementById("editor")!,
     });
 
@@ -29,6 +68,8 @@ function init() {
         case "APPLY_RESULT":
           if (message.ok) {
             renderSnapshot(message.snapshot);
+            const el = document.getElementById("statusbar");
+            if (el) el.textContent = "";
           } else {
             alert(`tab-oil error: ${message.error}`);
           }
@@ -47,7 +88,9 @@ function init() {
 }
 
 function renderSnapshot(snapshot: Snapshot): void {
-  const { text } = snapshotToText(snapshot);
+  lastSnapshot = snapshot;
+  const { text, urlMap } = snapshotToText(snapshot);
+  lastUrlMap = urlMap;
   view.dispatch({
     changes: {
       from: 0,

@@ -5,13 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tab-oil buffer</title>
   <style>
-    body { margin: 0; }
-    .cm-editor { height: 100vh; }
+    body { margin: 0; display: flex; flex-direction: column; height: 100vh; }
+    .cm-editor { flex: 1; }
     .cm-scroller { overflow: auto; }
+    #statusbar {
+      flex: 0 0 auto;
+      height: 24px;
+      line-height: 24px;
+      padding: 0 8px;
+      font: 13px monospace;
+      background: #1e1e1e;
+      color: #888;
+      border-top: 1px solid #333;
+      white-space: pre;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   </style>
 </head>
 <body>
   <div id="editor"></div>
+  <div id="statusbar"></div>
   <script type="module" src="buffer.js"></script>
 </body>
 </html>
