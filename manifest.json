@@ -3,7 +3,7 @@
   "name": "tab-oil",
   "version": "0.1.0",
   "description": "oil.nvim for your browser tabs",
-  "permissions": ["tabs", "storage", "clipboardWrite", "tabGroups"],
+  "permissions": ["tabs", "storage", "clipboardWrite", "tabGroups", "bookmarks"],
   "background": {
     "service_worker": "src/background/index.ts",
     "type": "module"

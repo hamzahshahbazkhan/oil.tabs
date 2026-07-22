@@ -10,6 +10,8 @@
 
 Press **Ctrl+Shift+E** to open the tab-oil buffer.
 
+**Permissions:** `tabs`, `storage`, `clipboardWrite`, `tabGroups`, `bookmarks` (for future folders/saved-tabs features).
+
 ## What it supports
 
 - **View all tabs** across all windows, grouped by window, one line per tab

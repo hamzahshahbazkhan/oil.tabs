@@ -126,7 +126,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
   - Verify: `npm run build` compiles, switch is exhaustive.
   - Commit message: `feat(apply): execute create and navigate operations`
 
-- [ ] **v0.3.6 — Manual end-to-end: create**
+- [x] **v0.3.6 — Manual end-to-end: create**
   - In a loaded-unpacked instance: `o` a new line with just a URL, `:w`,
     confirm a real new tab opens at the right window/position.
   - Verify: manual check as described; note result in Progress Log.
@@ -134,7 +134,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
     incidental fixes found during this check; if none needed, an empty
     commit noting the verification is acceptable — `git commit --allow-empty`)
 
-- [ ] **v0.3.7 — Manual end-to-end: navigate**
+- [x] **v0.3.7 — Manual end-to-end: navigate**
   - Edit the URL portion of an existing line, `:w`, confirm that real tab
     navigates to the new URL (not a new tab — same tab, new location).
   - Verify: manual check; note result in Progress Log.
@@ -430,4 +430,7 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  a6fdb3e  v0.5.4  diff() now compares groupId between old and parsed, emitting group ops; apply() calls browser.tabs.group; parse() tracks groupId; added groupId to ParsedLine.
 2026-07-22  2836707  v0.5.5  Added validateMoveOps() in diff.ts that filters out moves violating pinned/unpinned ordering; integrated into diff() before return.
 2026-07-22  d7ecf18  fix  Fixed 4 bugs: GROUP_HEADER_RE now captures only the group number (was capturing "Group: N" → NaN); snapshot.ts groupId extraction handles ID 0 correctly; apply.ts group case chains NEW/NONE/number; nonEditable filter bounds-checks lineNo against doc length.
+2026-07-22  b4158fe  feat  Dark Tokyo Night theme, auto-focus, yy yanks to vim register, J/K swap, :tab search command, normalizeUrl/extractTitle, seenUrl dedup, improved status bar counts.
+2026-07-22  861115d  test  v0.3.6 empty commit — manual verification needed: load unpacked, `o` new line with URL, `:w`, confirm a real new tab opens at right window/position.
+2026-07-22  d36f6eb  test  v0.3.7 empty commit — manual verification needed: edit URL on existing line, `:w`, confirm that real tab navigates (not a new tab).
 ```
