@@ -140,7 +140,7 @@ Before starting on task v0.3.1, do this one-time reconciliation pass:
   - Verify: manual check; note result in Progress Log.
   - Commit message: `test: verify navigate-tab flow end to end`
 
-- [ ] **v0.3.8 — Status line: pending-change summary**
+- [x] **v0.3.8 — Status line: pending-change summary**
   - In `src/buffer/`, add a small fixed bottom bar in `buffer.html`.
   - On every CodeMirror doc-change event (debounce ~150ms), re-run
     `parse()` + `diff()` against the last-known snapshot (client-side, no
@@ -418,4 +418,5 @@ _(Append one line per completed task, oldest first. Do not delete old entries.)_
 2026-07-22  2d97d70  v0.3.3  diff() emits navigate ops when a new URL differs from the snapshot line with the same tabId.
 2026-07-22  e015399  v0.3.4  Already implemented close→move→create→navigate ordering in diff() as part of v0.3.2/3.
 2026-07-22  aa33f28  v0.3.5  Replaced create/navigate stubs in apply() with real browser.tabs.create/update calls; added apply tests.
+2026-07-22  7c9072d  v0.3.8  Added fixed bottom status bar to buffer.html; debounced live parse+diff update on every doc change; clears on successful :w.
 ```
