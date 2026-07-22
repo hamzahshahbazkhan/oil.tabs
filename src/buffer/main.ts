@@ -4,6 +4,7 @@ import { snapshotToText, parse } from "./serialize";
 import { headerLineDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { diff } from "../background/diff";
+import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import { EditorState } from "@codemirror/state";
@@ -38,6 +39,23 @@ function scheduleStatusUpdate() {
   statusDebounceTimer = setTimeout(updateStatusBar, 150);
 }
 
+function save(force: boolean) {
+  if (!lastSnapshot) return;
+  const text = view.state.doc.toString();
+  const parsed = parse(text, lastUrlMap);
+  const ops = diff(lastSnapshot, parsed);
+  const closeCount = ops.filter((op) => op.kind === "close").length;
+
+  if (!force && closeCount > LARGE_DIFF_THRESHOLD) {
+    const ok = window.confirm(
+      `This will close ${closeCount} tabs. Continue?`,
+    );
+    if (!ok) return;
+  }
+
+  chrome.runtime.sendMessage({ type: "SAVE", text });
+}
+
 function init() {
   try {
     const statusListener = EditorView.updateListener.of((update) => {
@@ -58,7 +76,7 @@ function init() {
       parent: document.getElementById("editor")!,
     });
 
-    setupVimCommands(view);
+    setupVimCommands(view, save);
 
     chrome.runtime.onMessage.addListener((message: BgToBuffer) => {
       switch (message.type) {
