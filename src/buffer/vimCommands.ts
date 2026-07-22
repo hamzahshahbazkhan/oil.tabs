@@ -20,4 +20,10 @@ export function setupVimCommands(
   });
 
   Vim.mapCommand("gx", "action", "focusTab");
+
+  Vim.defineAction("refresh", () => {
+    chrome.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+  });
+
+  Vim.mapCommand("gr", "action", "refresh");
 }
