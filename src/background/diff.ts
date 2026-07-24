@@ -32,7 +32,7 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
   const perWindowPos = new Map<number, number>();
   for (const line of parsed) {
     const pos = perWindowPos.get(line.windowId) ?? 0;
-    if (line.tabId === null) {
+    if (line.tabId === null && !line.saved) {
       createOps.push({ kind: "create", url: line.url, windowId: line.windowId, index: pos });
     }
     perWindowPos.set(line.windowId, pos + 1);
