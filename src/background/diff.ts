@@ -149,9 +149,12 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
     }
   }
   if (savedUrls) {
+    const savedRestorePos = new Map<number, number>();
     for (const line of parsed) {
       if (!line.saved && line.tabId === null && savedUrls.has(line.url)) {
-        saveRestoreOps.push({ kind: "restoreFromSaved", url: line.url, title: "", windowId: line.windowId, index: 0 });
+        const pos = savedRestorePos.get(line.windowId) ?? 0;
+        saveRestoreOps.push({ kind: "restoreFromSaved", url: line.url, title: "", windowId: line.windowId, index: pos });
+        savedRestorePos.set(line.windowId, pos + 1);
       }
     }
   }
