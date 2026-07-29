@@ -100,6 +100,7 @@ export function snapshotToText(
         for (const tab of groupTabs) {
           const title = tab.discarded ? `[sleep] ${tab.title}` : tab.title;
           lines.push(`${title} — ${tab.url}`);
+          lineNum++;
           if (tab.tabId !== null) {
             idMap.set(lineNum, tab.tabId);
             urlMap.set(tab.url, tab.tabId);
@@ -110,7 +111,6 @@ export function snapshotToText(
           if (tab.favIconUrl) {
             faviconMap.set(lineNum, tab.favIconUrl);
           }
-          lineNum++;
         }
       }
     }
