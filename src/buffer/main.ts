@@ -100,6 +100,8 @@ function focusTab(tabId: number) {
   browser.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
 }
 
+document.getElementById("closeBtn")?.addEventListener("click", () => window.close());
+
 function init() {
   try {
     const statusListener = EditorView.updateListener.of((update) => {

@@ -99,10 +99,13 @@ export function setupVimCommands(
   Vim.mapCommand("J", "action", "moveLineDown");
   Vim.mapCommand("K", "action", "moveLineUp");
 
-  Vim.defineAction("closeBuffer", () => {
-    window.close();
-  });
+  const closeBuffer = () => window.close();
+
+  Vim.defineAction("closeBuffer", closeBuffer);
   Vim.mapCommand("-", "action", "closeBuffer", { context: "normal" });
+
+  Vim.defineEx("q", "q", closeBuffer);
+  Vim.defineEx("quit", "quit", closeBuffer);
 
   Vim.defineEx("cnext", "cn", () => {
     browser.runtime.sendMessage({ type: "CYCLE_NEXT" });

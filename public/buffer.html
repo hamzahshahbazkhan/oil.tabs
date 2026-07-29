@@ -47,10 +47,32 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    #closeBtn {
+      position: fixed;
+      top: 4px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: #565f89;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      z-index: 100;
+    }
+    #closeBtn:hover {
+      background: #1a1c2e;
+      color: #c0caf5;
+    }
   </style>
 </head>
 <body>
   <div id="staleBanner">Buffer may be out of date — press gr to refresh</div>
+  <button id="closeBtn">&times;</button>
   <div id="editor"></div>
   <div id="statusbar">loading...</div>
   <script type="module" src="buffer.js"></script>
