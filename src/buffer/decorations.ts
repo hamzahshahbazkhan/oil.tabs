@@ -5,19 +5,24 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines, faviconMap } from "./bufferState";
+import { nonEditableLines, faviconMap, idMap } from "./bufferState";
 import { extractUrl } from "./serialize";
 
 class FaviconWidget extends WidgetType {
   constructor(readonly src: string) { super() }
   eq(other: FaviconWidget) { return other.src === this.src }
   toDOM() {
-    const img = document.createElement("img");
-    img.src = this.src;
-    img.className = "cm-favicon";
-    img.loading = "lazy";
-    img.onerror = () => { img.style.display = "none"; };
-    return img;
+    if (this.src) {
+      const img = document.createElement("img");
+      img.src = this.src;
+      img.className = "cm-favicon";
+      img.loading = "lazy";
+      img.onerror = () => { img.style.display = "none"; };
+      return img;
+    }
+    const dot = document.createElement("span");
+    dot.className = "cm-favicon-placeholder";
+    return dot;
   }
   ignoreEvent() { return true; }
 }
@@ -135,11 +140,10 @@ export const faviconDeco = StateField.define<DecorationSet>({
 function buildFaviconDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (let i = 1; i <= state.doc.lines; i++) {
+    if (!idMap.has(i)) continue;
+    const line = state.doc.line(i);
     const url = faviconMap.get(i);
-    if (url) {
-      const line = state.doc.line(i);
-      builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(url), side: -1 }));
-    }
+    builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(url ?? ""), side: -1 }));
   }
   return builder.finish();
 }

@@ -51,6 +51,16 @@ export const bufferDarkTheme = EditorView.theme({
     marginRight: "6px",
     marginLeft: "2px",
   },
+  "span.cm-favicon-placeholder": {
+    display: "inline-block",
+    backgroundColor: "#3b4261",
+    width: "16px",
+    height: "16px",
+    verticalAlign: "middle",
+    marginRight: "6px",
+    marginLeft: "2px",
+    borderRadius: "50%",
+  },
   "&.cm-focused .cm-cursorLayer .cm-cursor": {
     visibility: "visible",
   },

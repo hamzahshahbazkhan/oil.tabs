@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import { EditorView, basicSetup } from "codemirror";
-import { keymap } from "@codemirror/view";
+import { keymap, lineNumbers } from "@codemirror/view";
 import { vim, getCM } from "@replit/codemirror-vim";
 import { Prec, EditorState } from "@codemirror/state";
 import { snapshotToText, parse } from "./serialize";
@@ -115,6 +115,14 @@ function init() {
       state: EditorState.create({
         extensions: [
           basicSetup,
+          lineNumbers({
+            formatNumber: (lineNo, state) => {
+              const cursor = state.selection.main.head;
+              const cursorLine = state.doc.lineAt(cursor);
+              const diff = lineNo - cursorLine.number;
+              return diff === 0 ? String(lineNo) : String(Math.abs(diff));
+            },
+          }),
           vim(),
           bufferDarkTheme,
           headerLineDeco,
