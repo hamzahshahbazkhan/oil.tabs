@@ -11,12 +11,12 @@ import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
-import { idMap, nonEditableLines, faviconMap } from "./bufferState";
+import { idMap, nonEditableLines, faviconMap, lineUrlMap } from "./bufferState";
 import { bufferDarkTheme } from "./theme";
 
 let view: EditorView;
 let lastSnapshot: Snapshot | null = null;
-let lastUrlMap = new Map<string, number>();
+let lastUrlMap = new Map<string, number[]>();
 let lastFolders: FolderInfo[] = [];
 let lastTabFolderMap: Record<number, number> = {};
 let lastSavedItems: SavedItem[] = [];
@@ -259,13 +259,13 @@ function init() {
       switch (message.type) {
         case "SNAPSHOT":
           hideStaleBanner();
-          renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
+          renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, true);
           updateStatusBar();
           break;
         case "APPLY_RESULT":
           if (message.ok) {
             hideStaleBanner();
-            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
+            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, false);
             updateStatusBar();
           } else {
             alert(`tab-oil error: ${message.error}`);
@@ -292,12 +292,12 @@ function init() {
   }
 }
 
-function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
+function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[], replaceDoc?: boolean): void {
   lastSnapshot = snapshot;
   lastFolders = folders ?? [];
   lastTabFolderMap = tabFolderMap ?? {};
   lastSavedItems = savedItems ?? [];
-  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable, faviconMap: newFaviconMap } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
+  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable, faviconMap: newFaviconMap, lineUrlMap: newLineUrlMap } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
   lastUrlMap = urlMap;
 
   idMap.clear();
@@ -312,9 +312,15 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   for (const [k, v] of newFaviconMap) {
     faviconMap.set(k, v);
   }
+  lineUrlMap.clear();
+  for (const [k, v] of newLineUrlMap) {
+    lineUrlMap.set(k, v);
+  }
+
+  dirty = false;
+  if (replaceDoc === false) return;
 
   if (text === view.state.doc.toString()) {
-    dirty = false;
     return;
   }
 

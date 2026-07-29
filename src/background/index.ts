@@ -9,7 +9,8 @@ import { diff } from "./diff";
 import { apply } from "./apply";
 
 let lastSnapshot: Snapshot | null = null;
-let currentUrlMap: Map<string, number> | null = null;
+let currentUrlMap: Map<string, number[]> | null = null;
+let previousUrlMap: Map<string, number[]> | null = null;
 let lastFolders: { id: number; name: string }[] = [];
 let lastTabFolderMap: Record<number, number> = {};
 let lastSavedItems: SavedItem[] = [];
@@ -93,9 +94,7 @@ async function sendStaleWarning(): Promise<void> {
 browser.tabs.onActivated.addListener((info) => {
   updateMRU(info.tabId);
 });
-browser.tabs.onRemoved.addListener(() => { sendStaleWarning(); });
-browser.tabs.onCreated.addListener(() => { sendStaleWarning(); });
-browser.tabs.onMoved.addListener(() => { sendStaleWarning(); });
+
 browser.tabs.onUpdated.addListener(() => { sendStaleWarning(); });
 
 browser.windows.onRemoved.addListener(async (windowId) => {
@@ -141,6 +140,7 @@ browser.runtime.onMessage.addListener(
   async (message: BufferToBg, sender: browser.runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
+        previousUrlMap = currentUrlMap;
         const snapshot = await takeSnapshot();
         const { urlMap } = snapshotToText(snapshot);
         lastSnapshot = snapshot;
@@ -159,14 +159,35 @@ browser.runtime.onMessage.addListener(
       }
 
       case "SAVE": {
-        if (!lastSnapshot || !currentUrlMap) {
-          const snapshot = await takeSnapshot();
-          const { urlMap } = snapshotToText(snapshot);
-          lastSnapshot = snapshot;
-          currentUrlMap = urlMap;
-        }
+        previousUrlMap = currentUrlMap;
+
+        const snapshot = await takeSnapshot();
+        const { urlMap } = snapshotToText(snapshot);
+        lastSnapshot = snapshot;
+        currentUrlMap = urlMap;
 
         const parsed = parse(message.text, currentUrlMap);
+
+        const fallbackTabIds = new Set<number>();
+        if (previousUrlMap) {
+          const existingIds = new Set(snapshot.lines.map(l => l.tabId));
+          const assignedIds = new Set<number>();
+          for (const p of parsed) {
+            if (p.tabId !== null) assignedIds.add(p.tabId);
+          }
+          for (const p of parsed) {
+            if (p.tabId === null) {
+              const prevIds = previousUrlMap.get(p.url) ?? [];
+              const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
+              if (prevId !== undefined) {
+                p.tabId = prevId;
+                assignedIds.add(prevId);
+                fallbackTabIds.add(prevId);
+              }
+            }
+          }
+        }
+
         const { folders: storedFolders, tabFolderMap: storedTabFolderMap, savedForLater } = await browser.storage.local.get(["folders", "tabFolderMap", "savedForLater"]);
         const folderMap = new Map<number, number | null>();
         if (storedTabFolderMap) {
@@ -182,7 +203,10 @@ browser.runtime.onMessage.addListener(
         const currentSaved = (savedForLater ?? []) as SavedItem[];
         const savedUrls = new Set(currentSaved.map((item: SavedItem) => item.url));
         const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
-        const result = await apply(ops);
+        const filteredOps = fallbackTabIds.size > 0
+          ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
+          : ops;
+        const result = await apply(filteredOps);
         try {
           await browser.tabs.update(sender.tab!.id!, { active: true });
         } catch {

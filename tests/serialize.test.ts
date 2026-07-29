@@ -28,10 +28,10 @@ describe("snapshotToText", () => {
 
   it("urlMap maps URLs to tabIds", () => {
     const { urlMap } = snapshotToText(fixture);
-    expect(urlMap.get("https://example.com/")).toBe(1);
-    expect(urlMap.get("https://github.com/")).toBe(2);
-    expect(urlMap.get("https://news.ycombinator.com/")).toBe(3);
-    expect(urlMap.get("https://mail.google.com/")).toBe(4);
+    expect(urlMap.get("https://example.com/")).toEqual([1]);
+    expect(urlMap.get("https://github.com/")).toEqual([2]);
+    expect(urlMap.get("https://news.ycombinator.com/")).toEqual([3]);
+    expect(urlMap.get("https://mail.google.com/")).toEqual([4]);
   });
 
   it("uses singular 'tab' for single-tab windows", () => {

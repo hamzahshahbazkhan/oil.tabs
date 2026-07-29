@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Operation } from "../src/shared/types";
 
+const mockTabsGet = vi.fn();
 const mockTabsRemove = vi.fn();
 const mockTabsMove = vi.fn();
 const mockTabsCreate = vi.fn();
@@ -12,6 +13,7 @@ const mockStorageSet = vi.fn();
 vi.mock("webextension-polyfill", () => ({
   default: {
     tabs: {
+      get: (...args: unknown[]) => mockTabsGet(...args),
       remove: (...args: unknown[]) => mockTabsRemove(...args),
       move: (...args: unknown[]) => mockTabsMove(...args),
       create: (...args: unknown[]) => mockTabsCreate(...args),
@@ -32,6 +34,7 @@ let apply: Awaited<typeof import("../src/background/apply")>["apply"];
 beforeEach(async () => {
   vi.clearAllMocks();
   mockStorageGet.mockResolvedValue({});
+  mockTabsGet.mockResolvedValue({ id: 1, windowId: 1 });
   apply = (await import("../src/background/apply")).apply;
 });
 
@@ -47,6 +50,7 @@ describe("apply", () => {
       windowId: 1,
       url: "https://newtab.com/",
       index: 2,
+      active: false,
     });
   });
 

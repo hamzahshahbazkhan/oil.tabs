@@ -5,7 +5,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines, faviconMap, idMap } from "./bufferState";
+import { nonEditableLines, faviconMap, idMap, lineUrlMap } from "./bufferState";
 import { extractUrl } from "./serialize";
 
 class FaviconWidget extends WidgetType {
@@ -142,8 +142,11 @@ function buildFaviconDecorations(state: EditorState): DecorationSet {
   for (let i = 1; i <= state.doc.lines; i++) {
     if (!idMap.has(i)) continue;
     const line = state.doc.line(i);
-    const url = faviconMap.get(i);
-    builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(url ?? ""), side: -1 }));
+    const docUrl = extractUrl(line.text);
+    const storedUrl = lineUrlMap.get(i);
+    const showPlaceholder = storedUrl !== undefined && docUrl !== storedUrl;
+    const faviconUrl = showPlaceholder ? "" : (faviconMap.get(i) ?? "");
+    builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(faviconUrl), side: -1 }));
   }
   return builder.finish();
 }

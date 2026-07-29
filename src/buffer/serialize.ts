@@ -14,14 +14,16 @@ export function snapshotToText(
 ): {
   text: string;
   idMap: Map<number, number>;
-  urlMap: Map<string, number>;
+  urlMap: Map<string, number[]>;
   nonEditableLines: Set<number>;
   faviconMap: Map<number, string>;
+  lineUrlMap: Map<number, string>;
 } {
   const idMap = new Map<number, number>();
-  const urlMap = new Map<string, number>();
+  const urlMap = new Map<string, number[]>();
   const nonEditableLines = new Set<number>();
   const faviconMap = new Map<number, string>();
+  const lineUrlMap = new Map<number, string>();
   const lines: string[] = [];
 
   const folderById = new Map<number, string>();
@@ -103,7 +105,9 @@ export function snapshotToText(
           lineNum++;
           if (tab.tabId !== null) {
             idMap.set(lineNum, tab.tabId);
-            urlMap.set(tab.url, tab.tabId);
+            const ids = urlMap.get(tab.url) ?? [];
+            ids.push(tab.tabId);
+            urlMap.set(tab.url, ids);
           }
           if (!tab.editable) {
             nonEditableLines.add(lineNum);
@@ -111,6 +115,7 @@ export function snapshotToText(
           if (tab.favIconUrl) {
             faviconMap.set(lineNum, tab.favIconUrl);
           }
+          lineUrlMap.set(lineNum, tab.url);
         }
       }
     }
@@ -136,17 +141,17 @@ export function snapshotToText(
     lines.pop();
   }
 
-  return { text: lines.join("\n"), idMap, urlMap, nonEditableLines, faviconMap };
+  return { text: lines.join("\n"), idMap, urlMap, nonEditableLines, faviconMap, lineUrlMap };
 }
 
-export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
+export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[] {
   const result: ParsedLine[] = [];
   const textLines = text.split("\n");
   let currentWindowId = 0;
   let currentGroupId: number | null = null;
   let currentFolderId: number | null = null;
   let inSavedSection = false;
-  const seenUrl = new Set<string>();
+  const usedTabIds = new Set<number>();
 
   const folders = new Map<string, number>();
 
@@ -190,14 +195,9 @@ export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {
     if (line.trim() === "") continue;
 
     const url = extractUrl(line);
-    let tabId = urlMap.get(url) ?? null;
-    if (tabId !== null) {
-      if (seenUrl.has(url)) {
-        tabId = null;
-      } else {
-        seenUrl.add(url);
-      }
-    }
+    const tabIds = urlMap.get(url) ?? [];
+    const tabId = tabIds.find(id => !usedTabIds.has(id)) ?? null;
+    if (tabId !== null) usedTabIds.add(tabId);
 
     result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId, saved: inSavedSection });
   }
