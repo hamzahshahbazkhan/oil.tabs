@@ -5,8 +5,106 @@ import {
   EditorView,
 } from "@codemirror/view";
 import { nonEditableLines } from "./bufferState";
+import { extractUrl } from "./serialize";
 
 const WINDOW_HEADER_RE = /^── Window \d+/;
+const TAB_LINE_RE = / — /;
+
+const brandColors: Record<string, string> = {
+  "youtube.com": "#ff0000",
+  "youtu.be": "#ff0000",
+  "github.com": "#58a6ff",
+  "twitter.com": "#1d9bf0",
+  "x.com": "#1d9bf0",
+  "reddit.com": "#ff4500",
+  "google.com": "#4285f4",
+  "wikipedia.org": "#e0e0e0",
+  "netflix.com": "#e50914",
+  "twitch.tv": "#9146ff",
+  "discord.com": "#5865f2",
+  "figma.com": "#f24e1e",
+  "notion.com": "#e0e0e0",
+  "linear.app": "#5e6ad2",
+  "vercel.com": "#e0e0e0",
+  "apple.com": "#ff2d55",
+  "amazon.com": "#ff9900",
+  "linkedin.com": "#0a66c2",
+  "stackoverflow.com": "#f48024",
+  "npmjs.com": "#cb3837",
+  "docker.com": "#2496ed",
+  "slack.com": "#e0a0d0",
+  "spotify.com": "#1db954",
+  "vscode.dev": "#007acc",
+  "mozilla.org": "#ff9400",
+  "whatsapp.com": "#25d366",
+  "telegram.org": "#26a5e4",
+  "microsoft.com": "#00a4ef",
+  "notion.site": "#e0e0e0",
+  "codepen.io": "#0ebeff",
+  "medium.com": "#ab8c5a",
+  "dev.to": "#a0a0a0",
+  "hashnode.com": "#2962ff",
+  "gitlab.com": "#fc6d26",
+  "bitbucket.org": "#2684ff",
+  "atlassian.com": "#0052cc",
+  "jira.com": "#0052cc",
+  "trello.com": "#0079bf",
+  "airbnb.com": "#ff5a5f",
+  "uber.com": "#000000",
+  "lyft.com": "#ff00bf",
+  "doordash.com": "#ff3000",
+};
+
+function hashColor(domain: string): string {
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = domain.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = ((hash % 360) + 360) % 360;
+  const sat = 55 + (Math.abs(hash) % 25);
+  const light = 50 + (Math.abs(hash >> 4) % 20);
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+}
+
+function getDomainColor(url: string): string | null {
+  try {
+    let host = new URL(url).hostname;
+    if (host.startsWith("www.")) host = host.slice(4);
+    const parts = host.split(".");
+    for (let i = 0; i < parts.length - 1; i++) {
+      const key = parts.slice(i).join(".");
+      if (brandColors[key]) return brandColors[key];
+    }
+    return hashColor(host);
+  } catch {
+    return null;
+  }
+}
+
+export const urlColorDeco = StateField.define<DecorationSet>({
+  create(state: EditorState) {
+    return buildUrlColorDecorations(state);
+  },
+  update(deco: DecorationSet, tr) {
+    if (tr.docChanged) return buildUrlColorDecorations(tr.state);
+    return deco.map(tr.changes);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+function buildUrlColorDecorations(state: EditorState): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  for (let i = 1; i <= state.doc.lines; i++) {
+    const line = state.doc.line(i);
+    if (!TAB_LINE_RE.test(line.text)) continue;
+    const url = extractUrl(line.text);
+    const color = getDomainColor(url);
+    if (color) {
+      builder.add(line.from, line.from, Decoration.line({ attributes: { style: `color: ${color}` } }));
+    }
+  }
+  return builder.finish();
+}
 
 export const headerLineDeco = StateField.define<DecorationSet>({
   create(state: EditorState) {
