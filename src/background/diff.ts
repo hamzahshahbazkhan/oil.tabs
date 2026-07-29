@@ -86,12 +86,15 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
     const oldArr = oldOrder.get(windowId) ?? [];
     const newArr = newOrder.get(windowId) ?? [];
 
-    const crossWindowMoved = new Set(
+    const crossWindowMovedOut = new Set(
       moveOps.filter((op): op is { kind: "move"; tabId: number; windowId: number; index: number } => op.kind === "move" && oldWindowOf.get(op.tabId) === windowId).map((op) => op.tabId)
     );
+    const crossWindowMovedIn = new Set(
+      moveOps.filter((op): op is { kind: "move"; tabId: number; windowId: number; index: number } => op.kind === "move" && op.windowId === windowId && oldWindowOf.get(op.tabId) !== windowId).map((op) => op.tabId)
+    );
 
-    const oldFiltered = oldArr.filter((id) => !crossWindowMoved.has(id));
-    const newFiltered = newArr.filter((id) => !crossWindowMoved.has(id));
+    const oldFiltered = oldArr.filter((id) => !crossWindowMovedOut.has(id));
+    const newFiltered = newArr.filter((id) => !crossWindowMovedOut.has(id) && !crossWindowMovedIn.has(id));
 
     const lcs = computeLCS(oldFiltered, newFiltered);
     const lcsSet = new Set(lcs);
@@ -166,23 +169,41 @@ export function diff(oldSnapshot: Snapshot, parsed: ParsedLine[], folderMap?: Ma
 
 export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {
   const pinnedByTab = new Map<number, boolean>();
+  const oldWindowOf = new Map<number, number>();
   for (const line of snapshot.lines) {
     if (line.tabId !== null) {
       pinnedByTab.set(line.tabId, line.pinned);
+      oldWindowOf.set(line.tabId, line.windowId);
     }
   }
 
-  const perWindowPinnedCount = new Map<number, number>();
+  const basePinnedCount = new Map<number, number>();
   for (const line of snapshot.lines) {
     if (line.tabId !== null && line.pinned) {
-      perWindowPinnedCount.set(line.windowId, (perWindowPinnedCount.get(line.windowId) ?? 0) + 1);
+      basePinnedCount.set(line.windowId, (basePinnedCount.get(line.windowId) ?? 0) + 1);
     }
   }
 
-  return moveOps.filter((op): op is Operation & { kind: "move" } => {
-    if (op.kind !== "move") return false;
+  const pendingMoveOps = moveOps.filter((op): op is Operation & { kind: "move" } => op.kind === "move");
+
+  for (const op of pendingMoveOps) {
     const isPinned = pinnedByTab.get(op.tabId) ?? false;
-    const pinnedCount = perWindowPinnedCount.get(op.windowId) ?? 0;
+    const oldWid = oldWindowOf.get(op.tabId);
+    if (oldWid !== undefined && oldWid !== op.windowId) {
+      if (isPinned) {
+        basePinnedCount.set(oldWid, (basePinnedCount.get(oldWid) ?? 1) - 1);
+        basePinnedCount.set(op.windowId, (basePinnedCount.get(op.windowId) ?? 0) + 1);
+      }
+    }
+  }
+
+  return pendingMoveOps.filter((op) => {
+    const isPinned = pinnedByTab.get(op.tabId) ?? false;
+    let pinnedCount = basePinnedCount.get(op.windowId) ?? 0;
+    const oldWid = oldWindowOf.get(op.tabId);
+    if (oldWid !== undefined && oldWid !== op.windowId && isPinned) {
+      pinnedCount--;
+    }
     if (isPinned && op.index >= pinnedCount) return false;
     if (!isPinned && op.index < pinnedCount) return false;
     return true;
