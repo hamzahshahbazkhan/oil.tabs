@@ -16,10 +16,12 @@ export function snapshotToText(
   idMap: Map<number, number>;
   urlMap: Map<string, number>;
   nonEditableLines: Set<number>;
+  faviconMap: Map<number, string>;
 } {
   const idMap = new Map<number, number>();
   const urlMap = new Map<string, number>();
   const nonEditableLines = new Set<number>();
+  const faviconMap = new Map<number, string>();
   const lines: string[] = [];
 
   const folderById = new Map<number, string>();
@@ -105,6 +107,9 @@ export function snapshotToText(
           if (!tab.editable) {
             nonEditableLines.add(lineNum);
           }
+          if (tab.favIconUrl) {
+            faviconMap.set(lineNum, tab.favIconUrl);
+          }
           lineNum++;
         }
       }
@@ -131,7 +136,7 @@ export function snapshotToText(
     lines.pop();
   }
 
-  return { text: lines.join("\n"), idMap, urlMap, nonEditableLines };
+  return { text: lines.join("\n"), idMap, urlMap, nonEditableLines, faviconMap };
 }
 
 export function parse(text: string, urlMap: Map<string, number>): ParsedLine[] {

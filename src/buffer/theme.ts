@@ -44,6 +44,13 @@ export const bufferDarkTheme = EditorView.theme({
     opacity: 0.35,
     pointerEvents: "none",
   },
+  "img.cm-favicon": {
+    width: "16px",
+    height: "16px",
+    verticalAlign: "middle",
+    marginRight: "6px",
+    marginLeft: "2px",
+  },
   "&.cm-focused .cm-cursorLayer .cm-cursor": {
     visibility: "visible",
   },

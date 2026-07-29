@@ -3,9 +3,24 @@ import type { DecorationSet } from "@codemirror/view";
 import {
   Decoration,
   EditorView,
+  WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines } from "./bufferState";
+import { nonEditableLines, faviconMap } from "./bufferState";
 import { extractUrl } from "./serialize";
+
+class FaviconWidget extends WidgetType {
+  constructor(readonly src: string) { super() }
+  eq(other: FaviconWidget) { return other.src === this.src }
+  toDOM() {
+    const img = document.createElement("img");
+    img.src = this.src;
+    img.className = "cm-favicon";
+    img.loading = "lazy";
+    img.onerror = () => { img.style.display = "none"; };
+    return img;
+  }
+  ignoreEvent() { return true; }
+}
 
 const WINDOW_HEADER_RE = /^── Window \d+/;
 const TAB_LINE_RE = / — /;
@@ -101,6 +116,29 @@ function buildUrlColorDecorations(state: EditorState): DecorationSet {
     const color = getDomainColor(url);
     if (color) {
       builder.add(line.from, line.from, Decoration.line({ attributes: { style: `color: ${color}` } }));
+    }
+  }
+  return builder.finish();
+}
+
+export const faviconDeco = StateField.define<DecorationSet>({
+  create(state: EditorState) {
+    return buildFaviconDecorations(state);
+  },
+  update(deco: DecorationSet, tr) {
+    if (tr.docChanged) return buildFaviconDecorations(tr.state);
+    return deco.map(tr.changes);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+function buildFaviconDecorations(state: EditorState): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  for (let i = 1; i <= state.doc.lines; i++) {
+    const url = faviconMap.get(i);
+    if (url) {
+      const line = state.doc.line(i);
+      builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(url), side: -1 }));
     }
   }
   return builder.finish();

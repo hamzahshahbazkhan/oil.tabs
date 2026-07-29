@@ -19,6 +19,8 @@ export async function takeSnapshot(): Promise<Snapshot> {
     const url = tab.url;
     const editable = true;
 
+    const favIconUrl = tab.favIconUrl && (tab.favIconUrl.startsWith("http") || tab.favIconUrl.startsWith("data:")) ? tab.favIconUrl : undefined;
+
     lines.push({
       tabId: tab.id,
       windowId: tab.windowId,
@@ -29,6 +31,7 @@ export async function takeSnapshot(): Promise<Snapshot> {
       discarded: tab.discarded ?? false,
       editable,
       groupId: tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
+      favIconUrl,
     });
   }
 

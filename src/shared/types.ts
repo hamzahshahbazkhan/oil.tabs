@@ -8,6 +8,7 @@ export interface BufferLine {
   discarded: boolean;
   editable: boolean;
   groupId: number | null;
+  favIconUrl?: string;
 }
 
 export type Operation =

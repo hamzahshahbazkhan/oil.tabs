@@ -4,14 +4,14 @@ import { keymap } from "@codemirror/view";
 import { vim, getCM } from "@replit/codemirror-vim";
 import { Prec, EditorState } from "@codemirror/state";
 import { snapshotToText, parse } from "./serialize";
-import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco } from "./decorations";
+import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { diff } from "../background/diff";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
-import { idMap, nonEditableLines } from "./bufferState";
+import { idMap, nonEditableLines, faviconMap } from "./bufferState";
 import { bufferDarkTheme } from "./theme";
 
 let view: EditorView;
@@ -120,6 +120,7 @@ function init() {
           headerLineDeco,
           nonEditableLineDeco,
           urlColorDeco,
+          faviconDeco,
           nonEditableTransactionFilter,
           statusListener,
           Prec.highest(keymap.of([
@@ -288,7 +289,7 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   lastFolders = folders ?? [];
   lastTabFolderMap = tabFolderMap ?? {};
   lastSavedItems = savedItems ?? [];
-  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
+  const { text, urlMap, idMap: newIdMap, nonEditableLines: newNonEditable, faviconMap: newFaviconMap } = snapshotToText(snapshot, lastFolders, lastTabFolderMap, lastSavedItems);
   lastUrlMap = urlMap;
 
   idMap.clear();
@@ -298,6 +299,10 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   nonEditableLines.clear();
   for (const v of newNonEditable) {
     nonEditableLines.add(v);
+  }
+  faviconMap.clear();
+  for (const [k, v] of newFaviconMap) {
+    faviconMap.set(k, v);
   }
 
   if (text === view.state.doc.toString()) {
