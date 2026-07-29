@@ -234,6 +234,17 @@ browser.runtime.onMessage.addListener(
         break;
       }
 
+      case "RELOAD_TABS": {
+        for (const tabId of message.tabIds) {
+          try {
+            await browser.tabs.reload(tabId);
+          } catch {
+            // Tab may have been closed
+          }
+        }
+        break;
+      }
+
       case "CYCLE_NEXT":
         await cycleTab("next");
         break;
