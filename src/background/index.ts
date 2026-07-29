@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId } from "./bufferWindow";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId } from "./bufferWindow";
 import { takeSnapshot } from "./snapshot";
 import type { Snapshot } from "../shared/types";
 import type { BgToBuffer, BufferToBg } from "../shared/messages";
@@ -97,6 +97,21 @@ browser.tabs.onRemoved.addListener(() => { sendStaleWarning(); });
 browser.tabs.onCreated.addListener(() => { sendStaleWarning(); });
 browser.tabs.onMoved.addListener(() => { sendStaleWarning(); });
 browser.tabs.onUpdated.addListener(() => { sendStaleWarning(); });
+
+browser.windows.onRemoved.addListener(async (windowId) => {
+  const bufWinId = await getBufferWindowId();
+  if (bufWinId === windowId) {
+    await browser.storage.session.remove(["bufferTabId", "bufferWindowId"]);
+  }
+});
+
+browser.action.onClicked.addListener(async () => {
+  await openOrFocusBufferTab();
+  const snapshot = await takeSnapshot();
+  const { urlMap } = snapshotToText(snapshot);
+  lastSnapshot = snapshot;
+  currentUrlMap = urlMap;
+});
 
 browser.commands.onCommand.addListener(async (command) => {
   if (command === "toggle-tab-buffer") {
