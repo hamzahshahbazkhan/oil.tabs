@@ -17,12 +17,7 @@ export async function takeSnapshot(): Promise<Snapshot> {
     if (tab.id === undefined || tab.windowId === undefined || tab.url === undefined) continue;
 
     const url = tab.url;
-    const editable = !(
-      url.startsWith("chrome://") ||
-      url.startsWith("chrome-extension://") ||
-      url.startsWith("about:") ||
-      url.startsWith("edge://")
-    );
+    const editable = true;
 
     lines.push({
       tabId: tab.id,
