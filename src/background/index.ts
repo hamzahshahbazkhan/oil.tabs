@@ -245,6 +245,18 @@ browser.runtime.onMessage.addListener(
         break;
       }
 
+      case "TOGGLE_MUTE_TABS": {
+        for (const tabId of message.tabIds) {
+          try {
+            const tab = await browser.tabs.get(tabId);
+            await browser.tabs.update(tabId, { muted: !tab.mutedInfo?.muted });
+          } catch {
+            // Tab may have been closed
+          }
+        }
+        break;
+      }
+
       case "CYCLE_NEXT":
         await cycleTab("next");
         break;

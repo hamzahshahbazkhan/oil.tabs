@@ -17,5 +17,6 @@ export type BufferToBg =
   | { type: "FOCUS_TAB"; tabId: number }
   | { type: "DISCARD_TABS"; tabIds: number[] }
   | { type: "RELOAD_TABS"; tabIds: number[] }
+  | { type: "TOGGLE_MUTE_TABS"; tabIds: number[] }
   | { type: "CYCLE_NEXT" }
   | { type: "CYCLE_PREV" };

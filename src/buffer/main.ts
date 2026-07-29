@@ -208,6 +208,34 @@ function init() {
                 return false;
               },
             },
+            {
+              key: "Ctrl-m",
+              run: (v: EditorView) => {
+                const cm = getCM(v);
+                const vs = cm?.state?.vim;
+                if (!vs || vs.insertMode) return false;
+
+                const tabIds: number[] = [];
+                const sel = v.state.selection.main;
+                const fromLine = v.state.doc.lineAt(sel.from);
+                const toLine = v.state.doc.lineAt(sel.to);
+                const seen = new Set<number>();
+
+                for (let i = fromLine.number; i <= toLine.number; i++) {
+                  const tabId = idMap.get(i);
+                  if (tabId !== undefined && !seen.has(tabId)) {
+                    seen.add(tabId);
+                    tabIds.push(tabId);
+                  }
+                }
+
+                if (tabIds.length > 0) {
+                  browser.runtime.sendMessage({ type: "TOGGLE_MUTE_TABS", tabIds });
+                  return true;
+                }
+                return false;
+              },
+            },
           ])),
         ],
       }),
