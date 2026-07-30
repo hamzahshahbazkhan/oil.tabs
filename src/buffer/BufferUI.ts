@@ -148,7 +148,6 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
       insert: text,
     },
   });
-  dirty = false;
 
   let newPos: number;
   if (prevTabId !== undefined) {

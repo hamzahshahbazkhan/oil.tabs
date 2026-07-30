@@ -14,6 +14,11 @@ let registered = false;
 
 const pendingDetach = new Map<number, BufferLine>();
 
+function favIconUrl(tab: browser.tabs.Tab): string | undefined {
+  const url = tab.favIconUrl;
+  return url && (url.startsWith("http") || url.startsWith("data:")) ? url : undefined;
+}
+
 function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
   return {
     tabId: tab.id!,
@@ -25,7 +30,7 @@ function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
     discarded: tab.discarded ?? false,
     editable: !(tab.url?.startsWith("about:") || tab.url?.startsWith("chrome:") || tab.url === ""),
     groupId: tab.groupId ?? null,
-    favIconUrl: tab.favIconUrl,
+    favIconUrl: favIconUrl(tab),
   };
 }
 

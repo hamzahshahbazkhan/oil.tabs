@@ -3,6 +3,8 @@ import type { BufferLine, Operation, ParsedLine, Snapshot } from "../shared/type
 function computeLCS(a: number[], b: number[]): number[] {
   const m = a.length;
   const n = b.length;
+  if (m === 0 || n === 0) return [];
+
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
 
   for (let i = 1; i <= m; i++) {
@@ -158,10 +160,12 @@ export function diff(
   const moveOps: Operation[] = [];
 
   for (const [windowId, tabIds] of newOrder) {
+    const indexOfTab = new Map<number, number>();
+    for (let i = 0; i < tabIds.length; i++) indexOfTab.set(tabIds[i], i);
     for (const tabId of tabIds) {
       const oldWid = oldWindowOf.get(tabId);
       if (oldWid !== undefined && oldWid !== windowId) {
-        moveOps.push({ kind: "move", tabId, windowId, index: tabIds.indexOf(tabId) });
+        moveOps.push({ kind: "move", tabId, windowId, index: indexOfTab.get(tabId)! });
       }
     }
   }
@@ -190,9 +194,11 @@ export function diff(
     const lcs = computeLCS(stableOld, stableNew);
     const lcsSet = new Set(lcs);
 
+    const indexInNew = new Map<number, number>();
+    for (let i = 0; i < newArr.length; i++) indexInNew.set(newArr[i], i);
     for (const tabId of stableNew) {
       if (!lcsSet.has(tabId)) {
-        moveOps.push({ kind: "move", tabId, windowId, index: newArr.indexOf(tabId) });
+        moveOps.push({ kind: "move", tabId, windowId, index: indexInNew.get(tabId)! });
       }
     }
   }

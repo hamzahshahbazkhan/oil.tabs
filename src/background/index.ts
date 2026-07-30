@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow } from "../adapter/BrowserAdapter";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow, discardTab } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
 import { formatSnapshot } from "../model/Formatter";
 import { diff } from "../engine/DiffEngine";
@@ -12,7 +12,20 @@ import type { SavedItem } from "../shared/storageSchema";
 
 let syncInited = false;
 let currentUrlMap: Map<string, number[]> | null = null;
-let previousUrlMap: Map<string, number[]> | null = null;
+
+let saveLock = Promise.resolve();
+
+async function withSaveLock<T>(fn: () => Promise<T>): Promise<T> {
+  let release: () => void;
+  const prev = saveLock;
+  saveLock = new Promise<void>(resolve => { release = resolve; });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release!();
+  }
+}
 
 async function loadFolderData(): Promise<{ folders: FolderInfo[]; tabFolderMap: Record<number, number> }> {
   const { folders, tabFolderMap } = await storageLocalGet(["folders", "tabFolderMap"]);
@@ -148,12 +161,10 @@ browser.runtime.onMessage.addListener(
   async (message: any, sender: browser.runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
-        const prevUrlMap = currentUrlMap;
         const snapshot = syncInited ? getSnapshot() : await takeSnapshot();
         const { urlMap } = formatSnapshot(snapshot);
         const folderData = await loadFolderData();
         const savedItems = await loadSavedItems();
-        previousUrlMap = prevUrlMap;
         currentUrlMap = urlMap;
         if (!syncInited) {
           await initTabModel(snapshot);
@@ -169,79 +180,88 @@ browser.runtime.onMessage.addListener(
       }
 
       case "SAVE": {
-        const snapshot = await takeSnapshot();
-        const { urlMap } = formatSnapshot(snapshot);
+        await withSaveLock(async () => {
+          const snapshot = await takeSnapshot();
+          const { urlMap } = formatSnapshot(snapshot);
 
-        const parsed = parse(message.text, urlMap);
+          const parsed = parse(message.text, urlMap);
 
-        const prevUrlMap = currentUrlMap;
-        const fallbackTabIds = new Set<number>();
-        if (prevUrlMap) {
-          const existingIds = new Set(snapshot.lines.map(l => l.tabId));
-          const assignedIds = new Set<number>();
-          for (const p of parsed) {
-            if (p.tabId !== null) assignedIds.add(p.tabId);
-          }
-          for (const p of parsed) {
-            if (p.tabId === null) {
-              const prevIds = (prevUrlMap.get(p.url) ?? []).slice().sort((a, b) => a - b);
-              const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
-              if (prevId !== undefined) {
-                p.tabId = prevId;
-                assignedIds.add(prevId);
-                fallbackTabIds.add(prevId);
+          const fallbackTabIds = new Set<number>();
+          if (currentUrlMap) {
+            const existingIds = new Set(snapshot.lines.map(l => l.tabId));
+            const assignedIds = new Set<number>();
+            for (const p of parsed) {
+              if (p.tabId !== null) assignedIds.add(p.tabId);
+            }
+            for (const p of parsed) {
+              if (p.tabId === null) {
+                const prevIds = (currentUrlMap.get(p.url) ?? []).slice().sort((a, b) => a - b);
+                const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
+                if (prevId !== undefined) {
+                  p.tabId = prevId;
+                  assignedIds.add(prevId);
+                  fallbackTabIds.add(prevId);
+                }
               }
             }
           }
-        }
 
-        const { folders: storedFolders, tabFolderMap: storedTabFolderMap, savedForLater } = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
-        const folderMap = new Map<number, number | null>();
-        if (storedTabFolderMap) {
-          for (const [key, val] of Object.entries(storedTabFolderMap as Record<string, number>)) {
+          const storedData = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
+          const storedFolders = (storedData.folders ?? []) as FolderInfo[];
+          const storedTabFolderMap = (storedData.tabFolderMap ?? {}) as Record<number, number>;
+          const storedSavedForLater = (storedData.savedForLater ?? []) as SavedItem[];
+
+          const folderMap = new Map<number, number | null>();
+          for (const [key, val] of Object.entries(storedTabFolderMap)) {
             folderMap.set(Number(key), val);
           }
-        }
-        for (const line of parsed) {
-          if (line.tabId !== null && !folderMap.has(line.tabId)) {
-            folderMap.set(line.tabId, null);
+          for (const line of parsed) {
+            if (line.tabId !== null && !folderMap.has(line.tabId)) {
+              folderMap.set(line.tabId, null);
+            }
           }
-        }
-        const currentSaved = (savedForLater ?? []) as SavedItem[];
-        const savedUrls = new Set(currentSaved.map((item: SavedItem) => item.url));
-        const ops = diff(snapshot, parsed, folderMap, savedUrls);
-        const filteredOps = fallbackTabIds.size > 0
-          ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
-          : ops;
-        const plannedOps = plan(filteredOps, snapshot);
-        const result = await execute(plannedOps, snapshot);
-        try {
-          await browser.tabs.update(sender.tab!.id!, { active: true });
-        } catch {
-          // Buffer tab may have closed
-        }
-        const freshSnapshot = await takeSnapshot();
-        const { urlMap: freshUrlMap } = formatSnapshot(freshSnapshot);
-        previousUrlMap = prevUrlMap;
-        currentUrlMap = freshUrlMap;
-        const freshFolderData = await loadFolderData();
-        const freshSavedItems = await loadSavedItems();
-        replaceSnapshot(freshSnapshot, freshFolderData.folders, freshFolderData.tabFolderMap, freshSavedItems);
+          const savedUrls = new Set(storedSavedForLater.map((item: SavedItem) => item.url));
+          const ops = diff(snapshot, parsed, folderMap, savedUrls);
+          const filteredOps = fallbackTabIds.size > 0
+            ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
+            : ops;
+          const plannedOps = plan(filteredOps, snapshot);
+          const result = await execute(plannedOps, snapshot);
+          try {
+            await browser.tabs.update(sender.tab!.id!, { active: true });
+          } catch {
+            // Buffer tab may have closed
+          }
+          const freshSnapshot = await takeSnapshot();
+          const { urlMap: freshUrlMap } = formatSnapshot(freshSnapshot);
+          currentUrlMap = freshUrlMap;
 
-        const response: BgToBuffer = {
-          type: "APPLY_RESULT",
-          ok: result.ok,
-          error: "error" in result ? result.error : undefined,
-          snapshot: freshSnapshot,
-          folders: freshFolderData.folders,
-          tabFolderMap: freshFolderData.tabFolderMap,
-          savedItems: freshSavedItems,
-        };
-        try {
-          await browser.tabs.sendMessage(sender.tab!.id!, response);
-        } catch {
-          // Tab may have closed
-        }
+          const freshFolders: FolderInfo[] = [];
+          const freshTabFolderMap: Record<number, number> = {};
+          const freshSavedItems: SavedItem[] = [];
+          {
+            const fd = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
+            if (fd.folders) freshFolders.push(...(fd.folders as FolderInfo[]));
+            if (fd.tabFolderMap) Object.assign(freshTabFolderMap, fd.tabFolderMap as Record<number, number>);
+            if (fd.savedForLater) freshSavedItems.push(...(fd.savedForLater as SavedItem[]));
+          }
+          replaceSnapshot(freshSnapshot, freshFolders, freshTabFolderMap, freshSavedItems);
+
+          const response: BgToBuffer = {
+            type: "APPLY_RESULT",
+            ok: result.ok,
+            error: "error" in result ? result.error : undefined,
+            snapshot: freshSnapshot,
+            folders: freshFolders,
+            tabFolderMap: freshTabFolderMap,
+            savedItems: freshSavedItems,
+          };
+          try {
+            await browser.tabs.sendMessage(sender.tab!.id!, response);
+          } catch {
+            // Tab may have closed
+          }
+        });
         break;
       }
 
@@ -257,7 +277,7 @@ browser.runtime.onMessage.addListener(
       case "DISCARD_TABS": {
         for (const tabId of message.tabIds) {
           try {
-            await (browser.tabs as any).discard(tabId);
+            await discardTab(tabId);
           } catch {
             // Tab may already be discarded or closed
           }

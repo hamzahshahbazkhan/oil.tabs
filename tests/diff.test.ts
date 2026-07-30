@@ -308,4 +308,67 @@ describe("diff", () => {
     expect(folderOps).toHaveLength(1);
     expect(folderOps[0]).toEqual({ kind: "assignFolder", tabId: 1, folderId: null });
   });
+
+  it("cross-window move produces correct index", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+      { tabId: 3, windowId: 2, index: 0 },
+    ]);
+    // Move tab 1 from window 1 to window 2, before tab 3
+    const parsed = makeParsed([
+      { tabId: 2, windowId: 1 },
+      { tabId: 1, windowId: 2 },
+      { tabId: 3, windowId: 2 },
+    ]);
+    const ops = diff(old, parsed);
+    const moveOps = ops.filter((op): op is Operation & { kind: "move" } => op.kind === "move");
+    const tab1Move = moveOps.find(op => op.tabId === 1);
+    expect(tab1Move).toBeDefined();
+    if (tab1Move) {
+      expect(tab1Move.windowId).toBe(2);
+      expect(tab1Move.index).toBe(0);
+    }
+  });
+
+  it("same-window reorder within LCS produces correct indices", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+      { tabId: 3, windowId: 1, index: 2 },
+      { tabId: 4, windowId: 1, index: 3 },
+    ]);
+    // Move tab 4 to position 0 (large shift)
+    const parsed = makeParsed([
+      { tabId: 4, windowId: 1 },
+      { tabId: 1, windowId: 1 },
+      { tabId: 2, windowId: 1 },
+      { tabId: 3, windowId: 1 },
+    ]);
+    const ops = diff(old, parsed);
+    const tab4Move = ops.find((op): op is Operation & { kind: "move" } => op.kind === "move" && op.tabId === 4);
+    expect(tab4Move).toBeDefined();
+    if (tab4Move) {
+      expect(tab4Move.index).toBe(0);
+    }
+  });
+
+  it("moving all tabs out of a window leaves no stale state", () => {
+    const old = makeSnapshot([
+      { tabId: 1, windowId: 1, index: 0 },
+      { tabId: 2, windowId: 1, index: 1 },
+    ]);
+    const parsed = makeParsed([
+      { tabId: 1, windowId: 2 },
+      { tabId: 2, windowId: 2 },
+    ]);
+    const ops = diff(old, parsed);
+    const closeOps = ops.filter(op => op.kind === "close");
+    expect(closeOps).toHaveLength(0);
+    const moveOps = ops.filter(op => op.kind === "move");
+    expect(moveOps.length).toBeGreaterThanOrEqual(1);
+    for (const op of moveOps) {
+      expect((op as any).windowId).toBe(2);
+    }
+  });
 });
