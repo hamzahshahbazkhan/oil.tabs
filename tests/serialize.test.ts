@@ -12,6 +12,14 @@ const fixture: Snapshot = {
   ],
 };
 
+const dupFixture: Snapshot = {
+  takenAt: 1000,
+  lines: [
+    { tabId: 1, windowId: 1, index: 0, url: "https://example.com/", title: "Example Domain", pinned: false, discarded: false, editable: true, groupId: null },
+    { tabId: 5, windowId: 1, index: 1, url: "https://example.com/", title: "Example Mirror", pinned: false, discarded: false, editable: true, groupId: null },
+  ],
+};
+
 describe("snapshotToText", () => {
   it("produces correct header and content lines", () => {
     const { text } = snapshotToText(fixture);
@@ -111,20 +119,86 @@ describe("parse", () => {
     expect(parsed[3].tabId).toBe(4);
   });
 
-  it("duplicate URLs preserve distinct tabIds via embedded [tabId]", () => {
-    const { text, urlMap } = snapshotToText(fixture);
-    // Duplicate the first line
+  it("duplicate URLs with [N] tags preserve distinct tabIds", () => {
+    const { text, urlMap } = snapshotToText(dupFixture);
+    const parsed = parse(text, urlMap);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[0].url).toBe("https://example.com/");
+    expect(parsed[1].tabId).toBe(5);
+    expect(parsed[1].url).toBe("https://example.com/");
+  });
+
+  it("duplicate URLs without [N] tags assign smallest tabId to first occurrence", () => {
+    const { urlMap } = snapshotToText(dupFixture);
+    // Strip [N] tags
+    const bareText = "Title A — https://example.com/\nTitle B — https://example.com/";
+    const parsed = parse(bareText, urlMap);
+    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[1].tabId).toBe(5);
+  });
+
+  it("reordered duplicate URL lines with [N] tags preserve identity", () => {
+    const { text, urlMap } = snapshotToText(dupFixture);
     const lines = text.split("\n");
-    const dupLine = lines[1].replace("[1]", "[99]"); // mimic a new tab with the same URL
-    lines.splice(2, 0, dupLine);
+    [lines[1], lines[2]] = [lines[2], lines[1]]; // swap the two content lines
+    const parsed = parse(lines.join("\n"), urlMap);
+    expect(parsed[0].tabId).toBe(5);
+    expect(parsed[1].tabId).toBe(1);
+  });
+
+  it("reordered duplicate URL lines without [N] tags are deterministic", () => {
+    const { urlMap } = snapshotToText(dupFixture);
+    const bareText = "Title B — https://example.com/\nTitle A — https://example.com/";
+    const parsed = parse(bareText, urlMap);
+    // First occurrence always gets smallest tabId (1), second gets (5)
+    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[1].tabId).toBe(5);
+  });
+
+  it("matching is invariant to urlMap entry order", () => {
+    // urlMap with reverse tabId order (5 before 1)
+    const reverseMap = new Map<string, number[]>([["https://example.com/", [5, 1]]]);
+    const bareText = "Title A — https://example.com/\nTitle B — https://example.com/";
+    const parsed = parse(bareText, reverseMap);
+    // Even though urlMap has [5, 1], sorting gives [1, 5]
+    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[1].tabId).toBe(5);
+  });
+
+  it("three tabs with same URL: first two match, third is null", () => {
+    const tripFixture: Snapshot = {
+      takenAt: 0,
+      lines: [
+        { tabId: 10, windowId: 1, index: 0, url: "https://a.com/", title: "A1", pinned: false, discarded: false, editable: true, groupId: null },
+        { tabId: 20, windowId: 1, index: 1, url: "https://a.com/", title: "A2", pinned: false, discarded: false, editable: true, groupId: null },
+      ],
+    };
+    const { urlMap } = snapshotToText(tripFixture);
+    const bareText = "A1 — https://a.com/\nA2 — https://a.com/\nA3 — https://a.com/";
+    const parsed = parse(bareText, urlMap);
+    expect(parsed[0].tabId).toBe(10);
+    expect(parsed[1].tabId).toBe(20);
+    expect(parsed[2].tabId).toBeNull();
+  });
+
+  it("one duplicate tab removed via close gets null for extra line", () => {
+    const { urlMap } = snapshotToText(dupFixture);
+    const bareText = "Title A — https://example.com/";
+    const parsed = parse(bareText, urlMap);
+    expect(parsed[0].tabId).toBe(1);
+  });
+
+  it("URL change on one duplicate tab with [N] preserves its tabId", () => {
+    const { text, urlMap } = snapshotToText(dupFixture);
+    const lines = text.split("\n");
+    lines[1] = lines[1].replace("https://example.com/", "https://changed.com/");
     const modified = lines.join("\n");
     const parsed = parse(modified, urlMap);
-    // Line [99] has tabId 99 but it's not in urlMap, so it falls back to URL matching
-    // urlMap has [1] for the URL, but 1 is already used by line 1
-    // So line 2 gets tabId null (URL already claimed)
     expect(parsed[0].tabId).toBe(1);
-    expect(parsed[1].tabId).toBeNull();
-    expect(parsed[2].tabId).toBe(2);
+    expect(parsed[0].url).toBe("https://changed.com/");
+    expect(parsed[1].tabId).toBe(5);
+    expect(parsed[1].url).toBe("https://example.com/");
   });
 });
 

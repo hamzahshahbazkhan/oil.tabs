@@ -108,6 +108,7 @@ export function snapshotToText(
             idMap.set(lineNum, tab.tabId);
             const ids = urlMap.get(tab.url) ?? [];
             ids.push(tab.tabId);
+            ids.sort((a, b) => a - b);
             urlMap.set(tab.url, ids);
           }
           if (!tab.editable) {
@@ -221,7 +222,7 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
     }
 
     if (tabId === null) {
-      const ids = urlMap.get(url) ?? [];
+      const ids = (urlMap.get(url) ?? []).slice().sort((a, b) => a - b);
       tabId = ids.find(id => !usedTabIds.has(id)) ?? null;
     }
 

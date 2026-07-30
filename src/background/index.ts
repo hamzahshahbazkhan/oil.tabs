@@ -177,7 +177,7 @@ browser.runtime.onMessage.addListener(
           }
           for (const p of parsed) {
             if (p.tabId === null) {
-              const prevIds = prevUrlMap.get(p.url) ?? [];
+              const prevIds = (prevUrlMap.get(p.url) ?? []).slice().sort((a, b) => a - b);
               const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
               if (prevId !== undefined) {
                 p.tabId = prevId;
