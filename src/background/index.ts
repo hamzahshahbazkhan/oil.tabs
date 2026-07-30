@@ -141,16 +141,18 @@ browser.runtime.onMessage.addListener(
   async (message: BufferToBg, sender: browser.runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
-        previousUrlMap = currentUrlMap;
+        const prevUrlMap = currentUrlMap;
         const snapshot = await takeSnapshot();
         const { urlMap } = snapshotToText(snapshot);
+        const folderData = await loadFolderData();
+        const savedItems = await loadSavedItems();
+        previousUrlMap = prevUrlMap;
         lastSnapshot = snapshot;
         currentUrlMap = urlMap;
-        const folderData = await loadFolderData();
         lastFolders = folderData.folders;
         lastTabFolderMap = folderData.tabFolderMap;
-        lastSavedItems = await loadSavedItems();
-        const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap, savedItems: lastSavedItems };
+        lastSavedItems = savedItems;
+        const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap, savedItems };
         try {
           await browser.tabs.sendMessage(sender.tab!.id!, response);
         } catch {
@@ -160,17 +162,14 @@ browser.runtime.onMessage.addListener(
       }
 
       case "SAVE": {
-        previousUrlMap = currentUrlMap;
-
         const snapshot = await takeSnapshot();
         const { urlMap } = snapshotToText(snapshot);
-        lastSnapshot = snapshot;
-        currentUrlMap = urlMap;
 
-        const parsed = parse(message.text, currentUrlMap);
+        const parsed = parse(message.text, urlMap);
 
+        const prevUrlMap = currentUrlMap;
         const fallbackTabIds = new Set<number>();
-        if (previousUrlMap) {
+        if (prevUrlMap) {
           const existingIds = new Set(snapshot.lines.map(l => l.tabId));
           const assignedIds = new Set<number>();
           for (const p of parsed) {
@@ -178,7 +177,7 @@ browser.runtime.onMessage.addListener(
           }
           for (const p of parsed) {
             if (p.tabId === null) {
-              const prevIds = previousUrlMap.get(p.url) ?? [];
+              const prevIds = prevUrlMap.get(p.url) ?? [];
               const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
               if (prevId !== undefined) {
                 p.tabId = prevId;
@@ -203,11 +202,11 @@ browser.runtime.onMessage.addListener(
         }
         const currentSaved = (savedForLater ?? []) as SavedItem[];
         const savedUrls = new Set(currentSaved.map((item: SavedItem) => item.url));
-        const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
+        const ops = diff(snapshot, parsed, folderMap, savedUrls);
         const filteredOps = fallbackTabIds.size > 0
           ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
           : ops;
-        const plannedOps = plan(filteredOps, lastSnapshot);
+        const plannedOps = plan(filteredOps, snapshot);
         const result = await apply(plannedOps);
         try {
           await browser.tabs.update(sender.tab!.id!, { active: true });
@@ -216,6 +215,7 @@ browser.runtime.onMessage.addListener(
         }
         const freshSnapshot = await takeSnapshot();
         const { urlMap: freshUrlMap } = snapshotToText(freshSnapshot);
+        previousUrlMap = prevUrlMap;
         lastSnapshot = freshSnapshot;
         currentUrlMap = freshUrlMap;
         const freshFolderData = await loadFolderData();
