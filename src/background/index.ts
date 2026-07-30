@@ -207,7 +207,7 @@ browser.runtime.onMessage.addListener(
           ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
           : ops;
         const plannedOps = plan(filteredOps, snapshot);
-        const result = await apply(plannedOps);
+        const result = await apply(plannedOps, snapshot);
         try {
           await browser.tabs.update(sender.tab!.id!, { active: true });
         } catch {
