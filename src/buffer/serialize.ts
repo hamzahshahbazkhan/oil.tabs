@@ -101,7 +101,8 @@ export function snapshotToText(
 
         for (const tab of groupTabs) {
           const title = tab.discarded ? `[sleep] ${tab.title}` : tab.title;
-          lines.push(`${title} — ${tab.url}`);
+          const tabTag = tab.tabId !== null ? `[${tab.tabId}] ` : "";
+          lines.push(`${tabTag}${title} — ${tab.url}`);
           lineNum++;
           if (tab.tabId !== null) {
             idMap.set(lineNum, tab.tabId);
@@ -144,6 +145,17 @@ export function snapshotToText(
   return { text: lines.join("\n"), idMap, urlMap, nonEditableLines, faviconMap, lineUrlMap };
 }
 
+export function extractTabId(line: string): number | null {
+  const match = line.match(/^\[(\d+)\]/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+const TAB_ID_RE = /^\[\d+\]\s*/;
+
+function stripTabId(line: string): string {
+  return line.replace(TAB_ID_RE, "");
+}
+
 export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[] {
   const result: ParsedLine[] = [];
   const textLines = text.split("\n");
@@ -152,6 +164,11 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
   let currentFolderId: number | null = null;
   let inSavedSection = false;
   const usedTabIds = new Set<number>();
+
+  const validTabIds = new Set<number>();
+  for (const ids of urlMap.values()) {
+    for (const id of ids) validTabIds.add(id);
+  }
 
   const folders = new Map<string, number>();
 
@@ -194,9 +211,20 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
 
     if (line.trim() === "") continue;
 
+    const tabIdFromLine = extractTabId(line);
     const url = extractUrl(line);
-    const tabIds = urlMap.get(url) ?? [];
-    const tabId = tabIds.find(id => !usedTabIds.has(id)) ?? null;
+
+    let tabId: number | null = null;
+
+    if (tabIdFromLine !== null && validTabIds.has(tabIdFromLine) && !usedTabIds.has(tabIdFromLine)) {
+      tabId = tabIdFromLine;
+    }
+
+    if (tabId === null) {
+      const ids = urlMap.get(url) ?? [];
+      tabId = ids.find(id => !usedTabIds.has(id)) ?? null;
+    }
+
     if (tabId !== null) usedTabIds.add(tabId);
 
     result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId, saved: inSavedSection });
@@ -214,13 +242,15 @@ export function normalizeUrl(url: string): string {
 }
 
 export function extractUrl(line: string): string {
-  const sepIndex = line.lastIndexOf(" — ");
-  const raw = sepIndex === -1 ? line.trim() : line.slice(sepIndex + 3).trim();
+  const clean = stripTabId(line);
+  const sepIndex = clean.lastIndexOf(" — ");
+  const raw = sepIndex === -1 ? clean.trim() : clean.slice(sepIndex + 3).trim();
   return normalizeUrl(raw);
 }
 
 export function extractTitle(line: string): string {
-  const sepIndex = line.lastIndexOf(" — ");
+  const clean = stripTabId(line);
+  const sepIndex = clean.lastIndexOf(" — ");
   if (sepIndex === -1) return "";
-  return line.slice(0, sepIndex).trim();
+  return clean.slice(0, sepIndex).trim();
 }
