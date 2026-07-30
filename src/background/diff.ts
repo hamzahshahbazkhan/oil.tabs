@@ -164,7 +164,7 @@ export function diff(
     }
   }
 
-  // ── Phase 8: Return in execution order ──
+  // ── Phase 8: Return ops (plan.ts will reorder for safe execution) ──
 
   return [
     ...closeOps,

@@ -6,6 +6,7 @@ import type { BgToBuffer, BufferToBg } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
 import { snapshotToText, parse } from "../buffer/serialize";
 import { diff } from "./diff";
+import { plan } from "./plan";
 import { apply } from "./apply";
 
 let lastSnapshot: Snapshot | null = null;
@@ -206,7 +207,8 @@ browser.runtime.onMessage.addListener(
         const filteredOps = fallbackTabIds.size > 0
           ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
           : ops;
-        const result = await apply(filteredOps);
+        const plannedOps = plan(filteredOps, lastSnapshot);
+        const result = await apply(plannedOps);
         try {
           await browser.tabs.update(sender.tab!.id!, { active: true });
         } catch {
