@@ -9,7 +9,8 @@ export interface FolderInfo {
 export type BgToBuffer =
   | { type: "SNAPSHOT"; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number>; savedItems?: SavedItem[] }
   | { type: "APPLY_RESULT"; ok: boolean; error?: string; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number>; savedItems?: SavedItem[] }
-  | { type: "STALE_WARNING" };
+  | { type: "STALE_WARNING" }
+  | { type: "SNAPSHOT_UPDATED"; snapshot: Snapshot; folders?: FolderInfo[]; tabFolderMap?: Record<number, number>; savedItems?: SavedItem[] };
 
 export type BufferToBg =
   | { type: "REQUEST_SNAPSHOT" }

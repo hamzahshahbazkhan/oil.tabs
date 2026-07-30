@@ -2,24 +2,31 @@ import browser from "webextension-polyfill";
 import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId } from "./bufferWindow";
 import { takeSnapshot } from "./snapshot";
 import type { Snapshot } from "../shared/types";
-import type { BgToBuffer, BufferToBg } from "../shared/messages";
+import type { BgToBuffer, BufferToBg, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
 import { snapshotToText, parse } from "../buffer/serialize";
 import { diff } from "./diff";
 import { plan } from "./plan";
 import { apply } from "./apply";
+import * as sync from "./sync";
 
-let lastSnapshot: Snapshot | null = null;
+let syncInited = false;
 let currentUrlMap: Map<string, number[]> | null = null;
 let previousUrlMap: Map<string, number[]> | null = null;
-let lastFolders: { id: number; name: string }[] = [];
-let lastTabFolderMap: Record<number, number> = {};
-let lastSavedItems: SavedItem[] = [];
 
-async function loadFolderData(): Promise<{ folders: { id: number; name: string }[]; tabFolderMap: Record<number, number> }> {
+async function initSync(snapshot: Snapshot): Promise<void> {
+  if (syncInited) {
+    sync.replaceSnapshot(snapshot);
+  } else {
+    await sync.init(snapshot);
+    syncInited = true;
+  }
+}
+
+async function loadFolderData(): Promise<{ folders: FolderInfo[]; tabFolderMap: Record<number, number> }> {
   const { folders, tabFolderMap } = await browser.storage.local.get(["folders", "tabFolderMap"]);
   return {
-    folders: (folders ?? []) as { id: number; name: string }[],
+    folders: (folders ?? []) as FolderInfo[],
     tabFolderMap: (tabFolderMap ?? {}) as Record<number, number>,
   };
 }
@@ -96,12 +103,11 @@ browser.tabs.onActivated.addListener((info) => {
   updateMRU(info.tabId);
 });
 
-browser.tabs.onUpdated.addListener(() => { sendStaleWarning(); });
-
 browser.windows.onRemoved.addListener(async (windowId) => {
   const bufWinId = await getBufferWindowId();
   if (bufWinId === windowId) {
     await browser.storage.session.remove(["bufferTabId", "bufferWindowId"]);
+    await sync.refreshBufferTabId();
   }
 });
 
@@ -109,8 +115,8 @@ browser.action.onClicked.addListener(async () => {
   await openOrFocusBufferTab();
   const snapshot = await takeSnapshot();
   const { urlMap } = snapshotToText(snapshot);
-  lastSnapshot = snapshot;
   currentUrlMap = urlMap;
+  await initSync(snapshot);
 });
 
 browser.commands.onCommand.addListener(async (command) => {
@@ -118,8 +124,8 @@ browser.commands.onCommand.addListener(async (command) => {
     await openOrFocusBufferTab();
     const snapshot = await takeSnapshot();
     const { urlMap } = snapshotToText(snapshot);
-    lastSnapshot = snapshot;
     currentUrlMap = urlMap;
+    await initSync(snapshot);
     return;
   }
 
@@ -142,16 +148,15 @@ browser.runtime.onMessage.addListener(
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
         const prevUrlMap = currentUrlMap;
-        const snapshot = await takeSnapshot();
+        const snapshot = syncInited ? sync.getSnapshot() : await takeSnapshot();
         const { urlMap } = snapshotToText(snapshot);
         const folderData = await loadFolderData();
         const savedItems = await loadSavedItems();
         previousUrlMap = prevUrlMap;
-        lastSnapshot = snapshot;
         currentUrlMap = urlMap;
-        lastFolders = folderData.folders;
-        lastTabFolderMap = folderData.tabFolderMap;
-        lastSavedItems = savedItems;
+        if (!syncInited) {
+          await initSync(snapshot);
+        }
         const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap, savedItems };
         try {
           await browser.tabs.sendMessage(sender.tab!.id!, response);
@@ -216,12 +221,10 @@ browser.runtime.onMessage.addListener(
         const freshSnapshot = await takeSnapshot();
         const { urlMap: freshUrlMap } = snapshotToText(freshSnapshot);
         previousUrlMap = prevUrlMap;
-        lastSnapshot = freshSnapshot;
         currentUrlMap = freshUrlMap;
         const freshFolderData = await loadFolderData();
-        lastFolders = freshFolderData.folders;
-        lastTabFolderMap = freshFolderData.tabFolderMap;
-        lastSavedItems = await loadSavedItems();
+        const freshSavedItems = await loadSavedItems();
+        sync.replaceSnapshot(freshSnapshot, freshFolderData.folders, freshFolderData.tabFolderMap, freshSavedItems);
 
         const response: BgToBuffer = {
           type: "APPLY_RESULT",
@@ -230,7 +233,7 @@ browser.runtime.onMessage.addListener(
           snapshot: freshSnapshot,
           folders: freshFolderData.folders,
           tabFolderMap: freshFolderData.tabFolderMap,
-          savedItems: lastSavedItems,
+          savedItems: freshSavedItems,
         };
         try {
           await browser.tabs.sendMessage(sender.tab!.id!, response);

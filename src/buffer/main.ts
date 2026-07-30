@@ -282,6 +282,9 @@ function init() {
             showStaleBanner();
           }
           break;
+        case "SNAPSHOT_UPDATED":
+          applySnapshotUpdate(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
+          break;
       }
     });
 
@@ -359,6 +362,76 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
     scrollIntoView: true,
   });
   view.focus();
+}
+
+function applySnapshotUpdate(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
+  if (dirty) {
+    showStaleBanner();
+    return;
+  }
+
+  const newData = snapshotToText(snapshot, folders ?? [], tabFolderMap ?? {}, savedItems ?? []);
+  const newText = newData.text;
+  const oldText = view.state.doc.toString();
+
+  if (newText === oldText) return;
+
+  const cursor = view.state.selection.main.head;
+  const cursorLine = view.state.doc.lineAt(cursor);
+  const cursorTabId = idMap.get(cursorLine.number);
+
+  const oldLines = oldText.split("\n");
+  const newLines = newText.split("\n");
+
+  let startLine = 0;
+  while (startLine < oldLines.length && startLine < newLines.length && oldLines[startLine] === newLines[startLine]) {
+    startLine++;
+  }
+
+  let oldEnd = oldLines.length - 1;
+  let newEnd = newLines.length - 1;
+  while (oldEnd >= startLine && newEnd >= startLine && oldLines[oldEnd] === newLines[newEnd]) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  lastSnapshot = snapshot;
+  lastFolders = folders ?? [];
+  lastTabFolderMap = tabFolderMap ?? {};
+  lastSavedItems = savedItems ?? [];
+  lastUrlMap = newData.urlMap;
+
+  idMap.clear();
+  for (const [k, v] of newData.idMap) idMap.set(k, v);
+  nonEditableLines.clear();
+  for (const v of newData.nonEditableLines) nonEditableLines.add(v);
+  faviconMap.clear();
+  for (const [k, v] of newData.faviconMap) faviconMap.set(k, v);
+  lineUrlMap.clear();
+  for (const [k, v] of newData.lineUrlMap) lineUrlMap.set(k, v);
+
+  dirty = false;
+
+  const from = startLine < view.state.doc.lines ? view.state.doc.line(startLine + 1).from : view.state.doc.length;
+  const to = oldEnd >= 0 && oldEnd < view.state.doc.lines ? view.state.doc.line(oldEnd + 1).to : view.state.doc.length;
+  const insert = newLines.slice(startLine, newEnd + 1).join("\n");
+
+  view.dispatch({ changes: { from, to, insert } });
+
+  if (cursorTabId !== undefined) {
+    for (let i = 1; i <= view.state.doc.lines; i++) {
+      if (idMap.get(i) === cursorTabId) {
+        view.dispatch({
+          selection: { anchor: view.state.doc.line(i).from },
+          scrollIntoView: true,
+        });
+        break;
+      }
+    }
+  }
+
+  hideStaleBanner();
+  updateStatusBar();
 }
 
 if (document.readyState === "loading") {
