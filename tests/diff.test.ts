@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diff, validateMoveOps } from "../src/background/diff";
+import { diff, validateMoveOps } from "../src/engine/DiffEngine";
 import type { Snapshot, ParsedLine, Operation } from "../src/shared/types";
 
 function makeSnapshot(lines: { tabId: number; windowId: number; index: number; pinned?: boolean }[]): Snapshot {

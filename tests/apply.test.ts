@@ -29,7 +29,7 @@ vi.mock("webextension-polyfill", () => ({
   },
 }));
 
-let apply: Awaited<typeof import("../src/background/apply")>["apply"];
+let execute: Awaited<typeof import("../src/engine/Executor")>["execute"];
 
 function snapshot(lines?: { tabId: number; windowId: number }[]): Snapshot {
   return {
@@ -52,16 +52,16 @@ beforeEach(async () => {
   vi.clearAllMocks();
   mockStorageGet.mockResolvedValue({});
   mockTabsGet.mockResolvedValue({ id: 1, windowId: 1, index: 0, url: "https://old.com/", groupId: -1 });
-  apply = (await import("../src/background/apply")).apply;
+  execute = (await import("../src/engine/Executor")).execute;
 });
 
-describe("apply", () => {
+describe("execute", () => {
   it("create op calls tabs.create with correct args", async () => {
     mockTabsCreate.mockResolvedValue({ id: 100 });
     const ops: Operation[] = [
       { kind: "create", url: "https://newtab.com/", windowId: 1, index: 2 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result).toEqual({ ok: true });
     expect(mockTabsCreate).toHaveBeenCalledTimes(1);
     expect(mockTabsCreate).toHaveBeenCalledWith({
@@ -77,7 +77,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "navigate", tabId: 42, url: "https://other.com/" },
     ];
-    const result = await apply(ops, snapshot([{ tabId: 42, windowId: 1 }]));
+    const result = await execute(ops, snapshot([{ tabId: 42, windowId: 1 }]));
     expect(result).toEqual({ ok: true });
     expect(mockTabsUpdate).toHaveBeenCalledTimes(1);
     expect(mockTabsUpdate).toHaveBeenCalledWith(42, { url: "https://other.com/" });
@@ -90,7 +90,7 @@ describe("apply", () => {
       { kind: "close", tabId: 1 },
       { kind: "create", url: "https://a.com/", windowId: 1, index: 0 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result).toEqual({ ok: true });
     expect(mockTabsRemove).toHaveBeenCalledTimes(1);
     expect(mockTabsCreate).toHaveBeenCalledTimes(1);
@@ -101,7 +101,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "assignFolder", tabId: 1, folderId: 5 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result).toEqual({ ok: true });
     expect(mockStorageSet).toHaveBeenCalledTimes(1);
     expect(mockStorageSet).toHaveBeenCalledWith({ tabFolderMap: { 1: 5 } });
@@ -111,7 +111,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "discard", tabId: 42 },
     ];
-    const result = await apply(ops, snapshot([{ tabId: 42, windowId: 1 }]));
+    const result = await execute(ops, snapshot([{ tabId: 42, windowId: 1 }]));
     expect(result).toEqual({ ok: true });
     expect(mockTabsDiscard).toHaveBeenCalledWith(42);
   });
@@ -122,7 +122,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "saveForLater", tabId: 5, url: "https://save.com/", title: "Save Me" },
     ];
-    const result = await apply(ops, snapshot([{ tabId: 5, windowId: 1 }]));
+    const result = await execute(ops, snapshot([{ tabId: 5, windowId: 1 }]));
     expect(result).toEqual({ ok: true });
     expect(mockStorageSet).toHaveBeenCalled();
     expect(mockTabsRemove).toHaveBeenCalledWith(5);
@@ -137,7 +137,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "restoreFromSaved", url: "https://restore.com/", title: "Restore Me", windowId: 1, index: 2 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result).toEqual({ ok: true });
     expect(mockTabsCreate).toHaveBeenCalledWith({ url: "https://restore.com/", windowId: 1, index: 2 });
     expect(mockStorageSet).toHaveBeenCalledWith({ savedForLater: [] });
@@ -148,7 +148,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "assignFolder", tabId: 1, folderId: null },
     ];
-    const result = await apply(ops, snapshot([{ tabId: 1, windowId: 1 }, { tabId: 2, windowId: 1 }]));
+    const result = await execute(ops, snapshot([{ tabId: 1, windowId: 1 }, { tabId: 2, windowId: 1 }]));
     expect(result).toEqual({ ok: true });
     expect(mockStorageSet).toHaveBeenCalledWith({ tabFolderMap: { 2: 3 } });
   });
@@ -157,7 +157,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "close", tabId: 999 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result.ok).toBe(false);
     expect(result.error).toContain("does not exist in the snapshot");
   });
@@ -166,7 +166,7 @@ describe("apply", () => {
     const ops: Operation[] = [
       { kind: "create", url: "https://x.com/", windowId: 999, index: 0 },
     ];
-    const result = await apply(ops, snapshot());
+    const result = await execute(ops, snapshot());
     expect(result.ok).toBe(false);
     expect(result.error).toContain("does not exist in the snapshot");
   });
@@ -181,7 +181,7 @@ describe("apply", () => {
       { kind: "close", tabId: 1 },
       { kind: "close", tabId: 2 },
     ];
-    const result = await apply(ops, snapshot([{ tabId: 1, windowId: 1 }, { tabId: 2, windowId: 1 }]));
+    const result = await execute(ops, snapshot([{ tabId: 1, windowId: 1 }, { tabId: 2, windowId: 1 }]));
     expect(result.ok).toBe(false);
     expect(result.error).toContain("Failed to close tab 2");
     // Tab 1 close was rolled back (recreated via tabs.create)
@@ -198,7 +198,7 @@ describe("apply", () => {
       { tabId: 1, windowId: 1 },
       { tabId: 2, windowId: 2 },
     ]);
-    const result = await apply(ops, s);
+    const result = await execute(ops, s);
     expect(result).toEqual({ ok: true });
   });
 });

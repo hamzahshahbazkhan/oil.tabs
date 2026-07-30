@@ -1,8 +1,8 @@
 import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
 import { Vim } from "@replit/codemirror-vim";
-import { idMap, nonEditableLines } from "./bufferState";
-import { extractUrl, extractTitle } from "./serialize";
+import { idMap, nonEditableLines } from "./BufferUI";
+import { extractUrl, extractTitle } from "../model/Parser";
 
 export function setupVimCommands(
   view: EditorView,

@@ -5,8 +5,8 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines, faviconMap, idMap, lineUrlMap } from "./bufferState";
-import { extractUrl } from "./serialize";
+import { nonEditableLines, faviconMap, idMap, lineUrlMap } from "./BufferUI";
+import { extractUrl } from "../model/Parser";
 
 class FaviconWidget extends WidgetType {
   constructor(readonly src: string) { super() }

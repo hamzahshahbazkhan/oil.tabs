@@ -1,17 +1,15 @@
-/// <reference types="webextension-polyfill" />
-import browser from "webextension-polyfill";
 import type { Operation, Snapshot } from "../shared/types";
-
-const hasTabGroups = typeof (browser.tabs as any).group === "function";
-const hasDiscard = typeof (browser.tabs as any).discard === "function";
-const hasBookmarks = typeof (browser as any).bookmarks?.create === "function";
+import {
+  hasTabGroups, hasDiscard, hasBookmarks,
+  getTab, removeTab, createTab, moveTab, updateTab, discardTab, groupTabs,
+  createBookmark, removeBookmark,
+  storageLocalGet, storageLocalSet,
+} from "../adapter/BrowserAdapter";
 
 interface JournalEntry {
   description: string;
   rollback: () => Promise<void>;
 }
-
-// ── Validation ───────────────────────────────────────────────────────────
 
 function tabIdOf(op: Operation): number | null {
   if (op.kind === "create") return null;
@@ -46,16 +44,14 @@ function validateOps(ops: Operation[], snapshot: Snapshot): string | null {
   return null;
 }
 
-// ── Per-operation execution with rollback capture ────────────────────────
-
 async function execClose(op: Operation & { kind: "close" }): Promise<JournalEntry> {
-  const tab = await browser.tabs.get(op.tabId);
+  const tab = await getTab(op.tabId);
   const before = { url: tab.url ?? "", windowId: tab.windowId, index: tab.index };
-  await browser.tabs.remove(op.tabId);
+  await removeTab(op.tabId);
   return {
     description: `close tab ${op.tabId}`,
     rollback: async () => {
-      await browser.tabs.create({
+      await createTab({
         url: before.url,
         windowId: before.windowId,
         index: before.index,
@@ -66,19 +62,19 @@ async function execClose(op: Operation & { kind: "close" }): Promise<JournalEntr
 }
 
 async function execMove(op: Operation & { kind: "move" }): Promise<JournalEntry> {
-  const tab = await browser.tabs.get(op.tabId);
+  const tab = await getTab(op.tabId);
   const before = { windowId: tab.windowId, index: tab.index };
-  await browser.tabs.move(op.tabId, { windowId: op.windowId, index: op.index });
+  await moveTab(op.tabId, { windowId: op.windowId, index: op.index });
   return {
     description: `move tab ${op.tabId}`,
     rollback: async () => {
-      await browser.tabs.move(op.tabId, { windowId: before.windowId, index: before.index });
+      await moveTab(op.tabId, { windowId: before.windowId, index: before.index });
     },
   };
 }
 
 async function execCreate(op: Operation & { kind: "create" }): Promise<JournalEntry> {
-  const newTab = await browser.tabs.create({
+  const newTab = await createTab({
     windowId: op.windowId,
     url: op.url,
     index: op.index,
@@ -89,20 +85,20 @@ async function execCreate(op: Operation & { kind: "create" }): Promise<JournalEn
     description: `create tab`,
     rollback: async () => {
       if (createdId !== undefined) {
-        await browser.tabs.remove(createdId);
+        await removeTab(createdId);
       }
     },
   };
 }
 
 async function execNavigate(op: Operation & { kind: "navigate" }): Promise<JournalEntry> {
-  const tab = await browser.tabs.get(op.tabId);
+  const tab = await getTab(op.tabId);
   const beforeUrl = tab.url ?? "";
-  await browser.tabs.update(op.tabId, { url: op.url });
+  await updateTab(op.tabId, { url: op.url });
   return {
     description: `navigate tab ${op.tabId}`,
     rollback: async () => {
-      await browser.tabs.update(op.tabId, { url: beforeUrl });
+      await updateTab(op.tabId, { url: beforeUrl });
     },
   };
 }
@@ -110,31 +106,31 @@ async function execNavigate(op: Operation & { kind: "navigate" }): Promise<Journ
 async function execGroup(op: Operation & { kind: "group" }): Promise<JournalEntry> {
   if (!hasTabGroups) return { description: "group (noop)", rollback: async () => {} };
 
-  const tab = await browser.tabs.get(op.tabId);
+  const tab = await getTab(op.tabId);
   const beforeGroupId: number | null = tab.groupId && tab.groupId > 0 ? tab.groupId : null;
 
   if (op.groupId === "NONE") {
-    await browser.tabs.group({ tabIds: [op.tabId], groupId: -1 });
+    await groupTabs({ tabIds: [op.tabId], groupId: -1 });
   } else if (op.groupId === "NEW") {
-    await browser.tabs.group({ tabIds: [op.tabId] });
+    await groupTabs({ tabIds: [op.tabId] });
   } else {
-    await browser.tabs.group({ tabIds: [op.tabId], groupId: op.groupId });
+    await groupTabs({ tabIds: [op.tabId], groupId: op.groupId });
   }
 
   return {
     description: `group tab ${op.tabId}`,
     rollback: async () => {
       if (beforeGroupId !== null) {
-        await browser.tabs.group({ tabIds: [op.tabId], groupId: beforeGroupId });
+        await groupTabs({ tabIds: [op.tabId], groupId: beforeGroupId });
       } else {
-        await browser.tabs.group({ tabIds: [op.tabId], groupId: -1 });
+        await groupTabs({ tabIds: [op.tabId], groupId: -1 });
       }
     },
   };
 }
 
 async function execAssignFolder(op: Operation & { kind: "assignFolder" }): Promise<JournalEntry> {
-  const { tabFolderMap } = await browser.storage.local.get("tabFolderMap");
+  const { tabFolderMap } = await storageLocalGet("tabFolderMap");
   const map: Record<number, number> = tabFolderMap ?? {};
   const beforeVal: number | null = map[op.tabId] ?? null;
 
@@ -143,19 +139,19 @@ async function execAssignFolder(op: Operation & { kind: "assignFolder" }): Promi
   } else {
     map[op.tabId] = op.folderId;
   }
-  await browser.storage.local.set({ tabFolderMap: map });
+  await storageLocalSet({ tabFolderMap: map });
 
   return {
     description: `assignFolder tab ${op.tabId}`,
     rollback: async () => {
-      const { tabFolderMap } = await browser.storage.local.get("tabFolderMap");
+      const { tabFolderMap } = await storageLocalGet("tabFolderMap");
       const m: Record<number, number> = tabFolderMap ?? {};
       if (beforeVal === null) {
         delete m[op.tabId];
       } else {
         m[op.tabId] = beforeVal;
       }
-      await browser.storage.local.set({ tabFolderMap: m });
+      await storageLocalSet({ tabFolderMap: m });
     },
   };
 }
@@ -163,7 +159,7 @@ async function execAssignFolder(op: Operation & { kind: "assignFolder" }): Promi
 async function execDiscard(op: Operation & { kind: "discard" }): Promise<JournalEntry> {
   if (!hasDiscard) return { description: "discard (noop)", rollback: async () => {} };
 
-  await browser.tabs.discard(op.tabId);
+  await discardTab(op.tabId);
   return {
     description: `discard tab ${op.tabId}`,
     rollback: async () => {
@@ -173,33 +169,33 @@ async function execDiscard(op: Operation & { kind: "discard" }): Promise<Journal
 }
 
 async function execSaveForLater(op: Operation & { kind: "saveForLater" }): Promise<JournalEntry> {
-  const { savedForLater } = await browser.storage.local.get("savedForLater");
+  const { savedForLater } = await storageLocalGet("savedForLater");
   const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
   list.push({ url: op.url, title: op.title, savedAt: Date.now() });
-  await browser.storage.local.set({ savedForLater: list });
+  await storageLocalSet({ savedForLater: list });
 
   let beforeTab: { url: string; windowId: number; index: number } | null = null;
   if (op.tabId > 0) {
     try {
-      const t = await browser.tabs.get(op.tabId);
+      const t = await getTab(op.tabId);
       beforeTab = { url: t.url ?? "", windowId: t.windowId, index: t.index };
     } catch {
       // Tab may already be gone
     }
-    await browser.tabs.remove(op.tabId);
+    await removeTab(op.tabId);
   }
 
   return {
     description: `saveForLater`,
     rollback: async () => {
-      const { savedForLater } = await browser.storage.local.get("savedForLater");
+      const { savedForLater } = await storageLocalGet("savedForLater");
       const updated = (savedForLater ?? []).filter(
         (item: any) => !(item.url === op.url && item.title === op.title),
       );
-      await browser.storage.local.set({ savedForLater: updated });
+      await storageLocalSet({ savedForLater: updated });
 
       if (beforeTab) {
-        await browser.tabs.create({
+        await createTab({
           url: beforeTab.url,
           windowId: beforeTab.windowId,
           index: beforeTab.index,
@@ -215,7 +211,7 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
 
   let beforeTab: { url: string; windowId: number; index: number } | null = null;
   try {
-    const t = await browser.tabs.get(op.tabId);
+    const t = await getTab(op.tabId);
     beforeTab = { url: t.url ?? "", windowId: t.windowId, index: t.index };
   } catch {
     // Tab may already be gone
@@ -223,26 +219,26 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
 
   let bookmarkId: string | undefined;
   try {
-    const bmNode = await browser.bookmarks.create({ title: op.title, url: op.url });
+    const bmNode = await createBookmark({ title: op.title, url: op.url });
     bookmarkId = bmNode.id;
   } catch {
     // Bookmark creation failed but we still need to handle the tab
   }
 
-  await browser.tabs.remove(op.tabId);
+  await removeTab(op.tabId);
 
   return {
     description: `bookmark tab ${op.tabId}`,
     rollback: async () => {
       if (bookmarkId !== undefined) {
         try {
-          await browser.bookmarks.remove(bookmarkId);
+          await removeBookmark(bookmarkId);
         } catch {
           console.warn(`Could not remove bookmark ${bookmarkId}`);
         }
       }
       if (beforeTab) {
-        await browser.tabs.create({
+        await createTab({
           url: beforeTab.url,
           windowId: beforeTab.windowId,
           index: beforeTab.index,
@@ -254,36 +250,34 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
 }
 
 async function execRestoreFromSaved(op: Operation & { kind: "restoreFromSaved" }): Promise<JournalEntry> {
-  const newTab = await browser.tabs.create({
+  const newTab = await createTab({
     url: op.url,
     windowId: op.windowId,
     index: op.index,
   });
   const createdId = newTab.id;
 
-  const { savedForLater } = await browser.storage.local.get("savedForLater");
+  const { savedForLater } = await storageLocalGet("savedForLater");
   const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
   const idx = list.findIndex((item) => item.url === op.url);
   const removed = idx !== -1 ? list.splice(idx, 1)[0] : null;
-  await browser.storage.local.set({ savedForLater: list });
+  await storageLocalSet({ savedForLater: list });
 
   return {
     description: `restoreFromSaved`,
     rollback: async () => {
       if (createdId !== undefined) {
-        await browser.tabs.remove(createdId);
+        await removeTab(createdId);
       }
-      const { savedForLater } = await browser.storage.local.get("savedForLater");
+      const { savedForLater } = await storageLocalGet("savedForLater");
       const restored = savedForLater ?? [];
       if (removed) restored.push(removed);
-      await browser.storage.local.set({ savedForLater: restored });
+      await storageLocalSet({ savedForLater: restored });
     },
   };
 }
 
-// ── Main entry point ─────────────────────────────────────────────────────
-
-export async function apply(
+export async function execute(
   ops: Operation[],
   preSnapshot: Snapshot,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -313,7 +307,6 @@ export async function apply(
       }
       journal.push(entry);
     } catch (err) {
-      // Rollback in reverse order (LIFO)
       const rollbackErrors: string[] = [];
       for (let i = journal.length - 1; i >= 0; i--) {
         try {

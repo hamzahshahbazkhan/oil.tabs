@@ -1,13 +1,83 @@
 import type { BufferLine, Operation, ParsedLine, Snapshot } from "../shared/types";
 
+function computeLCS(a: number[], b: number[]): number[] {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  const result: number[] = [];
+  let i = m, j = n;
+  while (i > 0 && j > 0) {
+    if (a[i - 1] === b[j - 1]) {
+      result.unshift(a[i - 1]);
+      i--;
+      j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      i--;
+    } else {
+      j--;
+    }
+  }
+  return result;
+}
+
+export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {
+  const pinnedByTab = new Map<number, boolean>();
+  const oldWindowOf = new Map<number, number>();
+  for (const line of snapshot.lines) {
+    if (line.tabId !== null) {
+      pinnedByTab.set(line.tabId, line.pinned);
+      oldWindowOf.set(line.tabId, line.windowId);
+    }
+  }
+
+  const basePinnedCount = new Map<number, number>();
+  for (const line of snapshot.lines) {
+    if (line.tabId !== null && line.pinned) {
+      basePinnedCount.set(line.windowId, (basePinnedCount.get(line.windowId) ?? 0) + 1);
+    }
+  }
+
+  const pendingMoves = moveOps.filter((op): op is Operation & { kind: "move" } => op.kind === "move");
+
+  for (const op of pendingMoves) {
+    const pinned = pinnedByTab.get(op.tabId) ?? false;
+    const oldWid = oldWindowOf.get(op.tabId);
+    if (oldWid !== undefined && oldWid !== op.windowId && pinned) {
+      basePinnedCount.set(oldWid, (basePinnedCount.get(oldWid) ?? 1) - 1);
+      basePinnedCount.set(op.windowId, (basePinnedCount.get(op.windowId) ?? 0) + 1);
+    }
+  }
+
+  return pendingMoves.filter((op) => {
+    const pinned = pinnedByTab.get(op.tabId) ?? false;
+    let count = basePinnedCount.get(op.windowId) ?? 0;
+    const oldWid = oldWindowOf.get(op.tabId);
+    if (oldWid !== undefined && oldWid !== op.windowId && pinned) {
+      count--;
+    }
+    if (pinned && op.index >= count) return false;
+    if (!pinned && op.index < count) return false;
+    return true;
+  });
+}
+
 export function diff(
   oldSnapshot: Snapshot,
   parsed: ParsedLine[],
   folderMap?: Map<number, number | null>,
   savedUrls?: Set<string>,
 ): Operation[] {
-  // ── Phase 1: Build identity maps ──
-
   const oldById = new Map<number, BufferLine>();
   const oldWindowOf = new Map<number, number>();
   for (const line of oldSnapshot.lines) {
@@ -25,8 +95,6 @@ export function diff(
     else tabIdsInNewText.add(line.tabId);
   }
 
-  // ── Phase 2: Close ops (tabs removed from the live layout) ──
-
   const closeOps: Operation[] = [];
   for (const tabId of oldById.keys()) {
     if (!tabIdsInNewText.has(tabId) && !tabIdsBeingSaved.has(tabId)) {
@@ -34,8 +102,6 @@ export function diff(
     }
   }
   const closedIds = new Set(closeOps.map((op) => op.tabId));
-
-  // ── Phase 3: Create ops (new URLs the user typed) ──
 
   const tabIndexWithinWindow = new Map<number, number>();
   const createOps: Operation[] = [];
@@ -46,8 +112,6 @@ export function diff(
     }
     tabIndexWithinWindow.set(line.windowId, idx + 1);
   }
-
-  // ── Phase 4: Identity-change ops (navigate / group / folder) ──
 
   const navigateOps: Operation[] = [];
   const groupOps: Operation[] = [];
@@ -71,8 +135,6 @@ export function diff(
     }
   }
 
-  // ── Phase 5: Move ops (cross-window then within-window via LCS) ──
-
   const canMove = (tabId: number) => !closedIds.has(tabId) && !tabIdsBeingSaved.has(tabId);
 
   const oldOrder = new Map<number, number[]>();
@@ -95,7 +157,6 @@ export function diff(
 
   const moveOps: Operation[] = [];
 
-  // 5a — cross-window moves
   for (const [windowId, tabIds] of newOrder) {
     for (const tabId of tabIds) {
       const oldWid = oldWindowOf.get(tabId);
@@ -105,7 +166,6 @@ export function diff(
     }
   }
 
-  // 5b — within-window moves (LCS, avoid redundant ops for cross-window arrivals)
   const allWindowIds = new Set([...oldOrder.keys(), ...newOrder.keys()]);
   for (const windowId of allWindowIds) {
     const oldArr = oldOrder.get(windowId) ?? [];
@@ -137,11 +197,7 @@ export function diff(
     }
   }
 
-  // ── Phase 6: Validate move ops ──
-
   const validMoveOps = validateMoveOps(moveOps, oldSnapshot);
-
-  // ── Phase 7: Save / restore ops ──
 
   const saveRestoreOps: Operation[] = [];
   for (const line of parsed) {
@@ -164,8 +220,6 @@ export function diff(
     }
   }
 
-  // ── Phase 8: Return ops (plan.ts will reorder for safe execution) ──
-
   return [
     ...closeOps,
     ...validMoveOps,
@@ -175,78 +229,4 @@ export function diff(
     ...folderOps,
     ...saveRestoreOps,
   ];
-}
-
-export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {
-  const pinnedByTab = new Map<number, boolean>();
-  const oldWindowOf = new Map<number, number>();
-  for (const line of snapshot.lines) {
-    if (line.tabId !== null) {
-      pinnedByTab.set(line.tabId, line.pinned);
-      oldWindowOf.set(line.tabId, line.windowId);
-    }
-  }
-
-  // pinned count from snapshot
-  const basePinnedCount = new Map<number, number>();
-  for (const line of snapshot.lines) {
-    if (line.tabId !== null && line.pinned) {
-      basePinnedCount.set(line.windowId, (basePinnedCount.get(line.windowId) ?? 0) + 1);
-    }
-  }
-
-  const pendingMoves = moveOps.filter((op): op is Operation & { kind: "move" } => op.kind === "move");
-
-  // adjust pinned count for cross-window moves
-  for (const op of pendingMoves) {
-    const pinned = pinnedByTab.get(op.tabId) ?? false;
-    const oldWid = oldWindowOf.get(op.tabId);
-    if (oldWid !== undefined && oldWid !== op.windowId && pinned) {
-      basePinnedCount.set(oldWid, (basePinnedCount.get(oldWid) ?? 1) - 1);
-      basePinnedCount.set(op.windowId, (basePinnedCount.get(op.windowId) ?? 0) + 1);
-    }
-  }
-
-  return pendingMoves.filter((op) => {
-    const pinned = pinnedByTab.get(op.tabId) ?? false;
-    let count = basePinnedCount.get(op.windowId) ?? 0;
-    const oldWid = oldWindowOf.get(op.tabId);
-    if (oldWid !== undefined && oldWid !== op.windowId && pinned) {
-      count--;
-    }
-    if (pinned && op.index >= count) return false;
-    if (!pinned && op.index < count) return false;
-    return true;
-  });
-}
-
-function computeLCS(a: number[], b: number[]): number[] {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
-    }
-  }
-
-  const result: number[] = [];
-  let i = m, j = n;
-  while (i > 0 && j > 0) {
-    if (a[i - 1] === b[j - 1]) {
-      result.unshift(a[i - 1]);
-      i--;
-      j--;
-    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
-      i--;
-    } else {
-      j--;
-    }
-  }
-  return result;
 }

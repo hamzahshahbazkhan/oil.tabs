@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { plan } from "../src/background/plan";
+import { plan } from "../src/engine/Planner";
 import type { Operation, Snapshot } from "../src/shared/types";
 
 function makeSnapshot(lines: { tabId: number; windowId: number }[]): Snapshot {

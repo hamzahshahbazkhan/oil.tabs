@@ -2,7 +2,7 @@ import browser from "webextension-polyfill";
 import type { Snapshot, BufferLine } from "../shared/types";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
-import { getBufferTabId } from "./bufferWindow";
+import { getBufferTabId, sendMessage, storageLocalGet } from "../adapter/BrowserAdapter";
 
 let currentSnapshot: Snapshot = { takenAt: 0, lines: [] };
 let currentFolders: FolderInfo[] = [];
@@ -10,6 +10,7 @@ let currentTabFolderMap: Record<number, number> = {};
 let currentSavedItems: SavedItem[] = [];
 let notifyTimer: ReturnType<typeof setTimeout> | null = null;
 let bufferTabId_: number | undefined;
+let registered = false;
 
 const pendingDetach = new Map<number, BufferLine>();
 
@@ -68,7 +69,7 @@ async function sendUpdate(): Promise<void> {
       tabFolderMap: currentTabFolderMap,
       savedItems: currentSavedItems,
     };
-    await browser.tabs.sendMessage(bufferTabId_, msg);
+    await sendMessage(bufferTabId_, msg);
   } catch {
     // buffer tab not ready
   }
@@ -77,19 +78,22 @@ async function sendUpdate(): Promise<void> {
 export async function init(snapshot: Snapshot): Promise<void> {
   currentSnapshot = snapshot;
   bufferTabId_ = await getBufferTabId();
-  const { folders, tabFolderMap, savedForLater } = await browser.storage.local.get(["folders", "tabFolderMap", "savedForLater"]);
+  const { folders, tabFolderMap, savedForLater } = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
   currentFolders = (folders ?? []) as FolderInfo[];
   currentTabFolderMap = (tabFolderMap ?? {}) as Record<number, number>;
   currentSavedItems = (savedForLater ?? []) as SavedItem[];
 
-  browser.tabs.onCreated.addListener(onTabCreated);
-  browser.tabs.onRemoved.addListener(onTabRemoved);
-  browser.tabs.onUpdated.addListener(onTabUpdated);
-  browser.tabs.onMoved.addListener(onTabMoved);
-  browser.tabs.onAttached.addListener(onTabAttached);
-  browser.tabs.onDetached.addListener(onTabDetached);
-  browser.windows.onCreated.addListener(onWindowCreated);
-  browser.windows.onRemoved.addListener(onWindowRemoved);
+  if (!registered) {
+    registered = true;
+    browser.tabs.onCreated.addListener(onTabCreated);
+    browser.tabs.onRemoved.addListener(onTabRemoved);
+    browser.tabs.onUpdated.addListener(onTabUpdated);
+    browser.tabs.onMoved.addListener(onTabMoved);
+    browser.tabs.onAttached.addListener(onTabAttached);
+    browser.tabs.onDetached.addListener(onTabDetached);
+    browser.windows.onCreated.addListener(onWindowCreated);
+    browser.windows.onRemoved.addListener(onWindowRemoved);
+  }
 }
 
 export function getSnapshot(): Snapshot {
@@ -120,7 +124,7 @@ async function onTabRemoved(tabId: number, _info: browser.tabs.TabRemoveInfo): P
   pendingDetach.delete(tabId);
   const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
   if (idx === -1) return;
-  const removed = currentSnapshot.lines.splice(idx, 1);
+  currentSnapshot.lines.splice(idx, 1);
   renumberIndices();
   scheduleNotify();
 }
@@ -176,7 +180,7 @@ async function onTabAttached(tabId: number, attachInfo: browser.tabs.TabAttachIn
   scheduleNotify();
 }
 
-async function onTabDetached(tabId: number, detachInfo: browser.tabs.TabDetachInfo): Promise<void> {
+async function onTabDetached(tabId: number, _detachInfo: browser.tabs.TabDetachInfo): Promise<void> {
   const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
   if (idx === -1) return;
 

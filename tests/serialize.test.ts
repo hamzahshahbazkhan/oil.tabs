@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { snapshotToText, parse, extractTabId, extractTitle, extractUrl } from "../src/buffer/serialize";
+import { formatSnapshot } from "../src/model/Formatter";
+import { parse, extractTabId, extractTitle, extractUrl } from "../src/model/Parser";
 import type { Snapshot } from "../src/shared/types";
 
 const fixture: Snapshot = {
@@ -20,9 +21,9 @@ const dupFixture: Snapshot = {
   ],
 };
 
-describe("snapshotToText", () => {
+describe("formatSnapshot", () => {
   it("produces correct header and content lines", () => {
-    const { text } = snapshotToText(fixture);
+    const { text } = formatSnapshot(fixture);
     const lines = text.split("\n");
     expect(lines[0]).toBe("── Window 1 · 2 tabs ──");
     expect(lines[1]).toBe("[1] Example Domain — https://example.com/");
@@ -35,7 +36,7 @@ describe("snapshotToText", () => {
   });
 
   it("urlMap maps URLs to tabIds", () => {
-    const { urlMap } = snapshotToText(fixture);
+    const { urlMap } = formatSnapshot(fixture);
     expect(urlMap.get("https://example.com/")).toEqual([1]);
     expect(urlMap.get("https://github.com/")).toEqual([2]);
     expect(urlMap.get("https://news.ycombinator.com/")).toEqual([3]);
@@ -49,14 +50,14 @@ describe("snapshotToText", () => {
         { tabId: 1, windowId: 1, index: 0, url: "https://a.com/", title: "A", pinned: false, discarded: false, editable: true, groupId: null },
       ],
     };
-    const { text } = snapshotToText(single);
+    const { text } = formatSnapshot(single);
     expect(text).toContain("· 1 tab ──");
   });
 });
 
 describe("parse", () => {
   it("round-trips correctly", () => {
-    const { text, urlMap } = snapshotToText(fixture);
+    const { text, urlMap } = formatSnapshot(fixture);
     const parsed = parse(text, urlMap);
     expect(parsed).toHaveLength(4);
     expect(parsed[0]).toEqual({ tabId: 1, windowId: 1, url: "https://example.com/", groupId: null, folderId: null, saved: false });
@@ -66,7 +67,7 @@ describe("parse", () => {
   });
 
   it("handles lines with missing separator gracefully", () => {
-    const { text, urlMap } = snapshotToText(fixture);
+    const { text, urlMap } = formatSnapshot(fixture);
     const modifiedLines = text.split("\n");
     modifiedLines[1] = "Example Domain https://example.com/";
     const modifiedText = modifiedLines.join("\n");
@@ -77,7 +78,7 @@ describe("parse", () => {
   });
 
   it("parses saved section lines with saved flag", () => {
-    const { text, urlMap } = snapshotToText(fixture);
+    const { text, urlMap } = formatSnapshot(fixture);
     const savedText = text + "\n\n── Saved For Later · 2 items ──\nSaved One — https://saved1.com/\nSaved Two — https://saved2.com/";
     const parsed = parse(savedText, urlMap);
     const savedLines = parsed.filter((l) => l.saved);
@@ -89,7 +90,7 @@ describe("parse", () => {
   });
 
   it("reordered lines preserve tabId via URL matching", () => {
-    const { text, urlMap } = snapshotToText(fixture);
+    const { text, urlMap } = formatSnapshot(fixture);
     const lines = text.split("\n");
     [lines[1], lines[2]] = [lines[2], lines[1]];
     const modifiedText = lines.join("\n");
@@ -107,7 +108,7 @@ describe("parse", () => {
   });
 
   it("URL change preserves tabId via embedded [tabId]", () => {
-    const { text, urlMap } = snapshotToText(fixture);
+    const { text, urlMap } = formatSnapshot(fixture);
     const modified = text.replace("https://example.com/", "https://changed.com/");
     const parsed = parse(modified, urlMap);
     // First tab keeps tabId 1 even though URL changed
@@ -120,7 +121,7 @@ describe("parse", () => {
   });
 
   it("duplicate URLs with [N] tags preserve distinct tabIds", () => {
-    const { text, urlMap } = snapshotToText(dupFixture);
+    const { text, urlMap } = formatSnapshot(dupFixture);
     const parsed = parse(text, urlMap);
     expect(parsed).toHaveLength(2);
     expect(parsed[0].tabId).toBe(1);
@@ -130,7 +131,7 @@ describe("parse", () => {
   });
 
   it("duplicate URLs without [N] tags assign smallest tabId to first occurrence", () => {
-    const { urlMap } = snapshotToText(dupFixture);
+    const { urlMap } = formatSnapshot(dupFixture);
     // Strip [N] tags
     const bareText = "Title A — https://example.com/\nTitle B — https://example.com/";
     const parsed = parse(bareText, urlMap);
@@ -139,7 +140,7 @@ describe("parse", () => {
   });
 
   it("reordered duplicate URL lines with [N] tags preserve identity", () => {
-    const { text, urlMap } = snapshotToText(dupFixture);
+    const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     [lines[1], lines[2]] = [lines[2], lines[1]]; // swap the two content lines
     const parsed = parse(lines.join("\n"), urlMap);
@@ -148,7 +149,7 @@ describe("parse", () => {
   });
 
   it("reordered duplicate URL lines without [N] tags are deterministic", () => {
-    const { urlMap } = snapshotToText(dupFixture);
+    const { urlMap } = formatSnapshot(dupFixture);
     const bareText = "Title B — https://example.com/\nTitle A — https://example.com/";
     const parsed = parse(bareText, urlMap);
     // First occurrence always gets smallest tabId (1), second gets (5)
@@ -174,7 +175,7 @@ describe("parse", () => {
         { tabId: 20, windowId: 1, index: 1, url: "https://a.com/", title: "A2", pinned: false, discarded: false, editable: true, groupId: null },
       ],
     };
-    const { urlMap } = snapshotToText(tripFixture);
+    const { urlMap } = formatSnapshot(tripFixture);
     const bareText = "A1 — https://a.com/\nA2 — https://a.com/\nA3 — https://a.com/";
     const parsed = parse(bareText, urlMap);
     expect(parsed[0].tabId).toBe(10);
@@ -183,14 +184,14 @@ describe("parse", () => {
   });
 
   it("one duplicate tab removed via close gets null for extra line", () => {
-    const { urlMap } = snapshotToText(dupFixture);
+    const { urlMap } = formatSnapshot(dupFixture);
     const bareText = "Title A — https://example.com/";
     const parsed = parse(bareText, urlMap);
     expect(parsed[0].tabId).toBe(1);
   });
 
   it("URL change on one duplicate tab with [N] preserves its tabId", () => {
-    const { text, urlMap } = snapshotToText(dupFixture);
+    const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     lines[1] = lines[1].replace("https://example.com/", "https://changed.com/");
     const modified = lines.join("\n");
