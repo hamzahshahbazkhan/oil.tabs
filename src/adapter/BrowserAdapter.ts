@@ -6,11 +6,12 @@ const BUFFER_WINDOW_ID_KEY = "bufferWindowId";
 
 export const hasTabGroups = typeof (browser.tabs as any).group === "function";
 export const hasDiscard = typeof (browser.tabs as any).discard === "function";
-export const hasBookmarks = typeof (browser as any).bookmarks?.create === "function";
+export const hasBookmarks =
+  typeof (browser as any).bookmarks?.create === "function";
 
 // ── Tab operations ──────────────────────────────────────────────────────
 
-export async function getTab(tabId: number): Promise<browser.tabs.Tab> {
+export async function getTab(tabId: number): Promise<browser.Tabs.Tab> {
   return browser.tabs.get(tabId);
 }
 
@@ -18,15 +19,26 @@ export async function removeTab(tabId: number): Promise<void> {
   await browser.tabs.remove(tabId);
 }
 
-export async function createTab(params: { windowId: number; url: string; index: number; active?: boolean }): Promise<browser.tabs.Tab> {
+export async function createTab(params: {
+  windowId: number;
+  url: string;
+  index: number;
+  active?: boolean;
+}): Promise<browser.Tabs.Tab> {
   return browser.tabs.create(params);
 }
 
-export async function moveTab(tabId: number, params: { windowId: number; index: number }): Promise<browser.tabs.Tab> {
+export async function moveTab(
+  tabId: number,
+  params: { windowId: number; index: number },
+): Promise<browser.tabs.Tab> {
   return browser.tabs.move(tabId, params);
 }
 
-export async function updateTab(tabId: number, params: { url?: string; active?: boolean; muted?: boolean }): Promise<void> {
+export async function updateTab(
+  tabId: number,
+  params: { url?: string; active?: boolean; muted?: boolean },
+): Promise<void> {
   await browser.tabs.update(tabId, params);
 }
 
@@ -34,17 +46,25 @@ export async function discardTab(tabId: number): Promise<void> {
   await (browser.tabs as any).discard(tabId);
 }
 
-export async function groupTabs(params: { tabIds: number[]; groupId?: number }): Promise<number> {
+export async function groupTabs(params: {
+  tabIds: number[];
+  groupId?: number;
+}): Promise<number> {
   return (browser.tabs as any).group(params);
 }
 
-export async function queryTabs(params: browser.tabs.QueryQueryInfo): Promise<browser.tabs.Tab[]> {
+export async function queryTabs(
+  params: browser.tabs.QueryQueryInfo,
+): Promise<browser.tabs.Tab[]> {
   return browser.tabs.query(params);
 }
 
 // ── Bookmark operations ─────────────────────────────────────────────────
 
-export async function createBookmark(params: { title: string; url: string }): Promise<browser.bookmarks.BookmarkTreeNode> {
+export async function createBookmark(params: {
+  title: string;
+  url: string;
+}): Promise<browser.bookmarks.BookmarkTreeNode> {
   return browser.bookmarks.create(params);
 }
 
@@ -54,37 +74,54 @@ export async function removeBookmark(id: string): Promise<void> {
 
 // ── Storage operations ──────────────────────────────────────────────────
 
-export async function storageLocalGet(keys: string | string[]): Promise<Record<string, any>> {
+export async function storageLocalGet(
+  keys: string | string[],
+): Promise<Record<string, any>> {
   return browser.storage.local.get(keys);
 }
 
-export async function storageLocalSet(data: Record<string, any>): Promise<void> {
+export async function storageLocalSet(
+  data: Record<string, any>,
+): Promise<void> {
   await browser.storage.local.set(data);
 }
 
-export async function storageSessionGet(keys: string | string[]): Promise<Record<string, any>> {
+export async function storageSessionGet(
+  keys: string | string[],
+): Promise<Record<string, any>> {
   return browser.storage.session.get(keys);
 }
 
-export async function storageSessionSet(data: Record<string, any>): Promise<void> {
+export async function storageSessionSet(
+  data: Record<string, any>,
+): Promise<void> {
   await browser.storage.session.set(data);
 }
 
-export async function storageSessionRemove(keys: string | string[]): Promise<void> {
+export async function storageSessionRemove(
+  keys: string | string[],
+): Promise<void> {
   await browser.storage.session.remove(keys);
 }
 
-export async function storageSyncGet(keys: string | string[]): Promise<Record<string, any>> {
+export async function storageSyncGet(
+  keys: string | string[],
+): Promise<Record<string, any>> {
   return browser.storage.sync.get(keys);
 }
 
 // ── Window operations ───────────────────────────────────────────────────
 
-export async function getWindow(windowId: number): Promise<browser.windows.Window> {
+export async function getWindow(
+  windowId: number,
+): Promise<browser.windows.Window> {
   return browser.windows.get(windowId, { populate: false });
 }
 
-export async function updateWindow(windowId: number, params: { focused?: boolean }): Promise<browser.windows.Window> {
+export async function updateWindow(
+  windowId: number,
+  params: { focused?: boolean },
+): Promise<browser.windows.Window> {
   return browser.windows.update(windowId, params);
 }
 
@@ -92,14 +129,24 @@ export async function getLastFocusedWindow(): Promise<browser.windows.Window> {
   return browser.windows.getLastFocused();
 }
 
-export async function createWindow(params: { url: string; type: "popup" | "normal"; width: number; height: number; left: number; top: number }): Promise<browser.windows.Window> {
+export async function createWindow(params: {
+  url: string;
+  type: "popup" | "normal";
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}): Promise<browser.windows.Window> {
   return browser.windows.create(params);
 }
 
 // ── Buffer window lifecycle ─────────────────────────────────────────────
 
 export async function openOrFocusBufferTab(): Promise<void> {
-  const stored = await browser.storage.session.get([BUFFER_TAB_ID_KEY, BUFFER_WINDOW_ID_KEY]);
+  const stored = await browser.storage.session.get([
+    BUFFER_TAB_ID_KEY,
+    BUFFER_WINDOW_ID_KEY,
+  ]);
   const existingTabId = stored[BUFFER_TAB_ID_KEY] as number | undefined;
   const existingWindowId = stored[BUFFER_WINDOW_ID_KEY] as number | undefined;
 
@@ -178,11 +225,20 @@ export async function takeSnapshot(): Promise<Snapshot> {
 
   for (const tab of tabs) {
     if (tab.id !== undefined && tab.id === bufferTabId) continue;
-    if (tab.id === undefined || tab.windowId === undefined || tab.url === undefined) continue;
+    if (
+      tab.id === undefined ||
+      tab.windowId === undefined ||
+      tab.url === undefined
+    )
+      continue;
 
     const url = tab.url;
     const editable = true;
-    const favIconUrl = tab.favIconUrl && (tab.favIconUrl.startsWith("http") || tab.favIconUrl.startsWith("data:")) ? tab.favIconUrl : undefined;
+    const favIconUrl =
+      tab.favIconUrl &&
+      (tab.favIconUrl.startsWith("http") || tab.favIconUrl.startsWith("data:"))
+        ? tab.favIconUrl
+        : undefined;
 
     lines.push({
       tabId: tab.id,
@@ -193,7 +249,8 @@ export async function takeSnapshot(): Promise<Snapshot> {
       pinned: tab.pinned ?? false,
       discarded: tab.discarded ?? false,
       editable,
-      groupId: tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
+      groupId:
+        tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
       favIconUrl,
     });
   }

@@ -2,7 +2,11 @@ import browser from "webextension-polyfill";
 import type { Snapshot, BufferLine } from "../shared/types";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
-import { getBufferTabId, sendMessage, storageLocalGet } from "../adapter/BrowserAdapter";
+import {
+  getBufferTabId,
+  sendMessage,
+  storageLocalGet,
+} from "../adapter/BrowserAdapter";
 
 let currentSnapshot: Snapshot = { takenAt: 0, lines: [] };
 let currentFolders: FolderInfo[] = [];
@@ -16,7 +20,9 @@ const pendingDetach = new Map<number, BufferLine>();
 
 function favIconUrl(tab: browser.tabs.Tab): string | undefined {
   const url = tab.favIconUrl;
-  return url && (url.startsWith("http") || url.startsWith("data:")) ? url : undefined;
+  return url && (url.startsWith("http") || url.startsWith("data:"))
+    ? url
+    : undefined;
 }
 
 function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
@@ -28,7 +34,11 @@ function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
     title: tab.title ?? "",
     pinned: tab.pinned ?? false,
     discarded: tab.discarded ?? false,
-    editable: !(tab.url?.startsWith("about:") || tab.url?.startsWith("chrome:") || tab.url === ""),
+    editable: !(
+      tab.url?.startsWith("about:") ||
+      tab.url?.startsWith("chrome:") ||
+      tab.url === ""
+    ),
     groupId: tab.groupId ?? null,
     favIconUrl: favIconUrl(tab),
   };
@@ -36,7 +46,10 @@ function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
 
 function insertLine(lines: BufferLine[], line: BufferLine): void {
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].windowId > line.windowId || (lines[i].windowId === line.windowId && lines[i].index > line.index)) {
+    if (
+      lines[i].windowId > line.windowId ||
+      (lines[i].windowId === line.windowId && lines[i].index > line.index)
+    ) {
       lines.splice(i, 0, line);
       return;
     }
@@ -83,7 +96,11 @@ async function sendUpdate(): Promise<void> {
 export async function init(snapshot: Snapshot): Promise<void> {
   currentSnapshot = snapshot;
   bufferTabId_ = await getBufferTabId();
-  const { folders, tabFolderMap, savedForLater } = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
+  const { folders, tabFolderMap, savedForLater } = await storageLocalGet([
+    "folders",
+    "tabFolderMap",
+    "savedForLater",
+  ]);
   currentFolders = (folders ?? []) as FolderInfo[];
   currentTabFolderMap = (tabFolderMap ?? {}) as Record<number, number>;
   currentSavedItems = (savedForLater ?? []) as SavedItem[];
@@ -105,7 +122,12 @@ export function getSnapshot(): Snapshot {
   return currentSnapshot;
 }
 
-export function replaceSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[]): void {
+export function replaceSnapshot(
+  snapshot: Snapshot,
+  folders?: FolderInfo[],
+  tabFolderMap?: Record<number, number>,
+  savedItems?: SavedItem[],
+): void {
   currentSnapshot = snapshot;
   if (folders !== undefined) currentFolders = folders;
   if (tabFolderMap !== undefined) currentTabFolderMap = tabFolderMap;
@@ -117,7 +139,12 @@ export async function refreshBufferTabId(): Promise<void> {
 }
 
 async function onTabCreated(tab: browser.tabs.Tab): Promise<void> {
-  if (tab.id === undefined || tab.id === bufferTabId_ || tab.windowId === undefined) return;
+  if (
+    tab.id === undefined ||
+    tab.id === bufferTabId_ ||
+    tab.windowId === undefined
+  )
+    return;
   const line = tabToBufferLine(tab);
   if (line.tabId === null) return;
   insertLine(currentSnapshot.lines, line);
@@ -125,34 +152,52 @@ async function onTabCreated(tab: browser.tabs.Tab): Promise<void> {
   scheduleNotify();
 }
 
-async function onTabRemoved(tabId: number, _info: browser.tabs.TabRemoveInfo): Promise<void> {
+async function onTabRemoved(
+  tabId: number,
+  _info: browser.tabs.TabRemoveInfo,
+): Promise<void> {
   pendingDetach.delete(tabId);
-  const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
+  const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
   currentSnapshot.lines.splice(idx, 1);
   renumberIndices();
   scheduleNotify();
 }
 
-async function onTabUpdated(tabId: number, changeInfo: browser.tabs.TabChangeInfo, tab: browser.tabs.Tab): Promise<void> {
+async function onTabUpdated(
+  tabId: number,
+  changeInfo: browser.tabs.TabChangeInfo,
+  tab: browser.tabs.Tab,
+): Promise<void> {
   if (tabId === bufferTabId_) return;
-  if (!changeInfo.url && !changeInfo.title && changeInfo.discarded === undefined && changeInfo.pinned === undefined && changeInfo.favIconUrl === undefined) return;
+  if (
+    !changeInfo.url &&
+    !changeInfo.title &&
+    changeInfo.discarded === undefined &&
+    changeInfo.pinned === undefined &&
+    changeInfo.favIconUrl === undefined
+  )
+    return;
 
-  const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
+  const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
 
   const line = currentSnapshot.lines[idx];
   if (changeInfo.url !== undefined) line.url = tab.url ?? line.url;
   if (changeInfo.title !== undefined) line.title = tab.title ?? line.title;
-  if (changeInfo.discarded !== undefined) line.discarded = tab.discarded ?? line.discarded;
+  if (changeInfo.discarded !== undefined)
+    line.discarded = tab.discarded ?? line.discarded;
   if (changeInfo.pinned !== undefined) line.pinned = tab.pinned ?? line.pinned;
   if (changeInfo.favIconUrl !== undefined) line.favIconUrl = tab.favIconUrl;
 
   scheduleNotify();
 }
 
-async function onTabMoved(tabId: number, moveInfo: browser.tabs.TabMoveInfo): Promise<void> {
-  const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
+async function onTabMoved(
+  tabId: number,
+  moveInfo: browser.tabs.TabMoveInfo,
+): Promise<void> {
+  const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
 
   const line = currentSnapshot.lines[idx];
@@ -163,7 +208,10 @@ async function onTabMoved(tabId: number, moveInfo: browser.tabs.TabMoveInfo): Pr
   scheduleNotify();
 }
 
-async function onTabAttached(tabId: number, attachInfo: browser.tabs.TabAttachInfo): Promise<void> {
+async function onTabAttached(
+  tabId: number,
+  attachInfo: browser.tabs.TabAttachInfo,
+): Promise<void> {
   let line: BufferLine;
   const pending = pendingDetach.get(tabId);
   if (pending) {
@@ -185,8 +233,11 @@ async function onTabAttached(tabId: number, attachInfo: browser.tabs.TabAttachIn
   scheduleNotify();
 }
 
-async function onTabDetached(tabId: number, _detachInfo: browser.tabs.TabDetachInfo): Promise<void> {
-  const idx = currentSnapshot.lines.findIndex(l => l.tabId === tabId);
+async function onTabDetached(
+  tabId: number,
+  _detachInfo: browser.tabs.TabDetachInfo,
+): Promise<void> {
+  const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
 
   pendingDetach.set(tabId, { ...currentSnapshot.lines[idx] });
@@ -195,7 +246,7 @@ async function onTabDetached(tabId: number, _detachInfo: browser.tabs.TabDetachI
   scheduleNotify();
 }
 
-async function onWindowCreated(_window: browser.windows.Window): Promise<void> {
+async function onWindowCreated(_window: browser.Windows.Window): Promise<void> {
   // new windows start with no tabs; nothing to add
 }
 
@@ -204,7 +255,9 @@ async function onWindowRemoved(windowId: number): Promise<void> {
   for (const [tabId, line] of pendingDetach) {
     if (line.windowId === windowId) pendingDetach.delete(tabId);
   }
-  currentSnapshot.lines = currentSnapshot.lines.filter(l => l.windowId !== windowId);
+  currentSnapshot.lines = currentSnapshot.lines.filter(
+    (l) => l.windowId !== windowId,
+  );
   if (currentSnapshot.lines.length < before) {
     scheduleNotify();
   }

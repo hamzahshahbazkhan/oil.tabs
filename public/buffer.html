@@ -1,80 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tab-oil</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background: #0f111a;
-      color: #c0caf5;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    }
-    #staleBanner {
-      flex: 0 0 auto;
-      display: none;
-      height: 28px;
-      line-height: 28px;
-      padding: 0 14px;
-      font-size: 12px;
-      background: #2d2416;
-      color: #e0af68;
-      border-bottom: 1px solid #3d2e16;
-      white-space: pre;
-    }
-    #editor {
-      flex: 1;
-      overflow: hidden;
-    }
-    #editor .cm-editor {
-      height: 100%;
-    }
-    #statusbar {
-      flex: 0 0 auto;
-      height: 28px;
-      line-height: 28px;
-      padding: 0 14px;
-      font-size: 12px;
-      background: #0a0b14;
-      color: #565f89;
-      border-top: 1px solid #1a1c2e;
-      white-space: pre;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #closeBtn {
-      position: fixed;
-      top: 4px;
-      right: 8px;
-      width: 24px;
-      height: 24px;
-      border: none;
-      background: transparent;
-      color: #565f89;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
-      z-index: 100;
-    }
-    #closeBtn:hover {
-      background: #1a1c2e;
-      color: #c0caf5;
-    }
-  </style>
-</head>
-<body>
-  <div id="staleBanner">Buffer may be out of date — press gr to refresh</div>
-  <button id="closeBtn">&times;</button>
-  <div id="editor"></div>
-  <div id="statusbar">loading...</div>
-  <script type="module" src="buffer.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tab-oil</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: #000000;
+        color: #c0caf5;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+      }
+      #staleBanner {
+        flex: 0 0 auto;
+        display: none;
+        height: 28px;
+        line-height: 28px;
+        padding: 0 14px;
+        font-size: 12px;
+        background: #2d2416;
+        color: #e0af68;
+        border-bottom: 1px solid #3d2e16;
+        white-space: pre;
+      }
+      #editor {
+        flex: 1;
+        overflow: hidden;
+      }
+      #editor .cm-editor {
+        height: 100%;
+      }
+      #statusbar {
+        flex: 0 0 auto;
+        height: 28px;
+        line-height: 28px;
+        padding: 0 14px;
+        font-size: 12px;
+        background: #0a0b14;
+        color: #565f89;
+        border-top: 1px solid #1a1c2e;
+        white-space: pre;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #closeBtn {
+        position: fixed;
+        top: 4px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: transparent;
+        color: #565f89;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        z-index: 100;
+      }
+      #closeBtn:hover {
+        background: #1a1c2e;
+        color: #c0caf5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="staleBanner">Buffer may be out of date — press gr to refresh</div>
+    <button id="closeBtn">&times;</button>
+    <div id="editor"></div>
+    <div id="statusbar">loading...</div>
+    <script type="module" src="buffer.js"></script>
+  </body>
 </html>
