@@ -13,7 +13,7 @@ export interface RenderedDocument {
   titleColumn: number;
 }
 
-function lineText(line: RenderedLine, idWidth: number, titleWidth: number): string {
+function lineText(line: RenderedLine, titleWidth: number): string {
   switch (line.kind) {
     case "header": {
       const label = line.meta ? `${line.title} │ ${line.meta}` : line.title ?? "";
@@ -27,13 +27,10 @@ function lineText(line: RenderedLine, idWidth: number, titleWidth: number): stri
     case "emptyState":
       return line.text ?? "";
     case "tabRow": {
-      const idText = line.tabId === undefined
-        ? " ".repeat(idWidth)
-        : `[${String(line.tabId).padStart(idWidth - 2, " ")}]`;
       const titlePart = line.title ?? line.url ?? "";
       const tagPart = line.discarded ? " [sleep]" : "";
       const pad = Math.max(0, titleWidth - titlePart.length - tagPart.length);
-      return `${idText} ${titlePart}${tagPart}${" ".repeat(pad)} — ${line.url ?? ""}`;
+      return `${titlePart}${tagPart}${" ".repeat(pad)} — ${line.url ?? ""}`;
     }
   }
 }
@@ -54,13 +51,9 @@ export function composeDocument(lines: RenderedLine[]): RenderedDocument {
   const lineKinds = new Map<number, LineKind>();
   const textLines: string[] = [];
 
-  let idWidth = 2;
   let titleWidth = 0;
   for (const line of lines) {
     if (line.kind !== "tabRow") continue;
-    if (line.tabId !== undefined) {
-      idWidth = Math.max(idWidth, `[${line.tabId}]`.length);
-    }
     titleWidth = Math.max(titleWidth, measureTitle(line));
   }
 
@@ -73,7 +66,7 @@ export function composeDocument(lines: RenderedLine[]): RenderedDocument {
 
   for (let i = 0; i < count; i++) {
     const line = lines[i];
-    textLines.push(lineText(line, idWidth, titleWidth));
+    textLines.push(lineText(line, titleWidth));
     const num = textLines.length;
     lineKinds.set(num, line.kind);
 
@@ -98,6 +91,6 @@ export function composeDocument(lines: RenderedLine[]): RenderedDocument {
     faviconMap,
     lineUrlMap,
     lineKinds,
-    titleColumn: idWidth + 1,
+    titleColumn: 0,
   };
 }

@@ -15,6 +15,8 @@ import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransa
 import { setupVimCommands } from "./vimCommands";
 import { bufferDarkTheme } from "./theme";
 
+declare const __BUILD_HASH__: string;
+
 const REFRESH_COOLDOWN = 2000;
 
 let view: EditorView;
@@ -66,7 +68,7 @@ function updateStatusBar(): void {
   }
   const el = document.getElementById("statusbar");
   if (el) {
-    el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows${opsSummary}`;
+    el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows${opsSummary} · b${__BUILD_HASH__}`;
   }
 }
 

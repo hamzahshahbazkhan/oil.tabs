@@ -29,12 +29,46 @@ export function setupVimCommands(
 
   Vim.mapCommand("gr", "action", "refresh");
 
+  const copyToClipboard = (text: string, onResult: (ok: boolean) => void): void => {
+    const transferred = (ok: boolean): void => onResult(ok);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => transferred(true)).catch(() => transferred(legacyCopy(text)));
+    } else {
+      transferred(legacyCopy(text));
+    }
+  };
+
+  const legacyCopy = (text: string): boolean => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const flashStatus = (msg: string): void => {
+    const el = document.getElementById("statusbar");
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(() => {
+      if (el.textContent === msg) el.textContent = "";
+    }, 2500);
+  };
+
   Vim.defineAction("yankUrl", (_cm: EditorView) => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
     const url = extractUrl(line.text);
-    navigator.clipboard.writeText(url);
     Vim.registerController.pushText('"', 'y', line.text + "\n", true);
+    copyToClipboard(url, (ok) => flashStatus(ok ? `yanked URL: ${url}` : "clipboard blocked — failed to copy"));
   });
 
   Vim.mapCommand("yy", "action", "yankUrl");

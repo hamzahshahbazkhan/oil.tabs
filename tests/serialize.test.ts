@@ -29,12 +29,12 @@ describe("formatSnapshot", () => {
     const { text } = formatSnapshot(fixture);
     const lines = text.split("\n");
     expect(lines[0]).toBe(`Window 1 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[1]).toBe("[1] Example Domain — https://example.com/");
-    expect(lines[2]).toBe(`[2] GitHub${" ".repeat(8)} — https://github.com/`);
+    expect(lines[1]).toBe("Example Domain — https://example.com/");
+    expect(lines[2]).toBe(`GitHub${" ".repeat(8)} — https://github.com/`);
     expect(lines[3]).toBe("");
     expect(lines[4]).toBe(`Window 2 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[5]).toBe(`[3] Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
-    expect(lines[6]).toBe(`[4] Gmail${" ".repeat(9)} — https://mail.google.com/`);
+    expect(lines[5]).toBe(`Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
+    expect(lines[6]).toBe(`Gmail${" ".repeat(9)} — https://mail.google.com/`);
     expect(lines).toHaveLength(7);
   });
 
@@ -68,7 +68,7 @@ describe("formatSnapshot", () => {
     const { text } = formatSnapshot(pinned);
     expect(text).not.toContain("▸ Pinned");
     expect(text).not.toContain("▸ Tabs");
-    expect(text.indexOf("[1] Pin")).toBeLessThan(text.indexOf("[2] Reg"));
+    expect(text.indexOf("Pin")).toBeLessThan(text.indexOf("Reg"));
   });
 });
 
@@ -124,12 +124,12 @@ describe("parse", () => {
     expect(parsed).toHaveLength(0);
   });
 
-  it("URL change preserves tabId via embedded [tabId]", () => {
+  it("URL change yields null tabId for the edited line", () => {
     const { text, urlMap } = formatSnapshot(fixture);
     const modified = text.replace("https://example.com/", "https://changed.com/");
     const parsed = parse(modified, urlMap);
-    // First tab keeps tabId 1 even though URL changed
-    expect(parsed[0].tabId).toBe(1);
+    // Without an embedded tabId the edited line can't be matched
+    expect(parsed[0].tabId).toBeNull();
     expect(parsed[0].url).toBe("https://changed.com/");
     // Other tabs unaffected
     expect(parsed[1].tabId).toBe(2);
@@ -137,7 +137,7 @@ describe("parse", () => {
     expect(parsed[3].tabId).toBe(4);
   });
 
-  it("duplicate URLs with [N] tags preserve distinct tabIds", () => {
+  it("duplicate URLs map to distinct tabIds", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const parsed = parse(text, urlMap);
     expect(parsed).toHaveLength(2);
@@ -147,25 +147,24 @@ describe("parse", () => {
     expect(parsed[1].url).toBe("https://example.com/");
   });
 
-  it("duplicate URLs without [N] tags assign smallest tabId to first occurrence", () => {
+  it("duplicate URLs assign smallest tabId to first occurrence", () => {
     const { urlMap } = formatSnapshot(dupFixture);
-    // Strip [N] tags
     const bareText = "Title A — https://example.com/\nTitle B — https://example.com/";
     const parsed = parse(bareText, urlMap);
     expect(parsed[0].tabId).toBe(1);
     expect(parsed[1].tabId).toBe(5);
   });
 
-  it("reordered duplicate URL lines with [N] tags preserve identity", () => {
+  it("reordered duplicate URL lines are deterministic by position", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     [lines[ROW], lines[ROW + 1]] = [lines[ROW + 1], lines[ROW]];
     const parsed = parse(lines.join("\n"), urlMap);
-    expect(parsed[0].tabId).toBe(5);
-    expect(parsed[1].tabId).toBe(1);
+    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[1].tabId).toBe(5);
   });
 
-  it("reordered duplicate URL lines without [N] tags are deterministic", () => {
+  it("reordered duplicate URL lines are deterministic", () => {
     const { urlMap } = formatSnapshot(dupFixture);
     const bareText = "Title B — https://example.com/\nTitle A — https://example.com/";
     const parsed = parse(bareText, urlMap);
@@ -207,15 +206,15 @@ describe("parse", () => {
     expect(parsed[0].tabId).toBe(1);
   });
 
-  it("URL change on one duplicate tab with [N] preserves its tabId", () => {
+  it("URL change on one duplicate tab yields null for it, other keeps its id", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     lines[ROW] = lines[ROW].replace("https://example.com/", "https://changed.com/");
     const modified = lines.join("\n");
     const parsed = parse(modified, urlMap);
-    expect(parsed[0].tabId).toBe(1);
+    expect(parsed[0].tabId).toBeNull();
     expect(parsed[0].url).toBe("https://changed.com/");
-    expect(parsed[1].tabId).toBe(5);
+    expect(parsed[1].tabId).toBe(1);
     expect(parsed[1].url).toBe("https://example.com/");
   });
 });
