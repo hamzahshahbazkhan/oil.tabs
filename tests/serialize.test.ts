@@ -21,17 +21,20 @@ const dupFixture: Snapshot = {
   ],
 };
 
+// First tab row within a window starts at index 1 (window header is line 0).
+const ROW = 1;
+
 describe("formatSnapshot", () => {
-  it("produces correct header and content lines", () => {
+  it("starts with the window header and aligns columns", () => {
     const { text } = formatSnapshot(fixture);
     const lines = text.split("\n");
-    expect(lines[0]).toBe("── Window 1 · 2 tabs ──");
+    expect(lines[0]).toBe(`Window 1 │ 2 tabs ${"─".repeat(54)}`);
     expect(lines[1]).toBe("[1] Example Domain — https://example.com/");
-    expect(lines[2]).toBe("[2] GitHub — https://github.com/");
+    expect(lines[2]).toBe(`[2] GitHub${" ".repeat(8)} — https://github.com/`);
     expect(lines[3]).toBe("");
-    expect(lines[4]).toBe("── Window 2 · 2 tabs ──");
-    expect(lines[5]).toBe("[3] Hacker News — https://news.ycombinator.com/");
-    expect(lines[6]).toBe("[4] Gmail — https://mail.google.com/");
+    expect(lines[4]).toBe(`Window 2 │ 2 tabs ${"─".repeat(54)}`);
+    expect(lines[5]).toBe(`[3] Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
+    expect(lines[6]).toBe(`[4] Gmail${" ".repeat(9)} — https://mail.google.com/`);
     expect(lines).toHaveLength(7);
   });
 
@@ -51,7 +54,21 @@ describe("formatSnapshot", () => {
       ],
     };
     const { text } = formatSnapshot(single);
-    expect(text).toContain("· 1 tab ──");
+    expect(text).toContain("│ 1 tab ─");
+  });
+
+  it("keeps pinned tabs inline without a Pinned section", () => {
+    const pinned: Snapshot = {
+      takenAt: 0,
+      lines: [
+        { tabId: 1, windowId: 1, index: 0, url: "https://pin.com/", title: "Pin", pinned: true, discarded: false, editable: true, groupId: null },
+        { tabId: 2, windowId: 1, index: 1, url: "https://reg.com/", title: "Reg", pinned: false, discarded: false, editable: true, groupId: null },
+      ],
+    };
+    const { text } = formatSnapshot(pinned);
+    expect(text).not.toContain("▸ Pinned");
+    expect(text).not.toContain("▸ Tabs");
+    expect(text.indexOf("[1] Pin")).toBeLessThan(text.indexOf("[2] Reg"));
   });
 });
 
@@ -79,7 +96,7 @@ describe("parse", () => {
 
   it("parses saved section lines with saved flag", () => {
     const { text, urlMap } = formatSnapshot(fixture);
-    const savedText = text + "\n\n── Saved For Later · 2 items ──\nSaved One — https://saved1.com/\nSaved Two — https://saved2.com/";
+    const savedText = text + "\n\n▸ Saved · 2 items\nSaved One — https://saved1.com/\nSaved Two — https://saved2.com/";
     const parsed = parse(savedText, urlMap);
     const savedLines = parsed.filter((l) => l.saved);
     expect(savedLines).toHaveLength(2);
@@ -92,7 +109,7 @@ describe("parse", () => {
   it("reordered lines preserve tabId via URL matching", () => {
     const { text, urlMap } = formatSnapshot(fixture);
     const lines = text.split("\n");
-    [lines[1], lines[2]] = [lines[2], lines[1]];
+    [lines[ROW], lines[ROW + 1]] = [lines[ROW + 1], lines[ROW]];
     const modifiedText = lines.join("\n");
     const parsed = parse(modifiedText, urlMap);
     expect(parsed[0].tabId).toBe(2);
@@ -142,7 +159,7 @@ describe("parse", () => {
   it("reordered duplicate URL lines with [N] tags preserve identity", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
-    [lines[1], lines[2]] = [lines[2], lines[1]]; // swap the two content lines
+    [lines[ROW], lines[ROW + 1]] = [lines[ROW + 1], lines[ROW]];
     const parsed = parse(lines.join("\n"), urlMap);
     expect(parsed[0].tabId).toBe(5);
     expect(parsed[1].tabId).toBe(1);
@@ -193,7 +210,7 @@ describe("parse", () => {
   it("URL change on one duplicate tab with [N] preserves its tabId", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
-    lines[1] = lines[1].replace("https://example.com/", "https://changed.com/");
+    lines[ROW] = lines[ROW].replace("https://example.com/", "https://changed.com/");
     const modified = lines.join("\n");
     const parsed = parse(modified, urlMap);
     expect(parsed[0].tabId).toBe(1);
@@ -206,6 +223,7 @@ describe("parse", () => {
 describe("extractTabId", () => {
   it("extracts tabId from bracketed prefix", () => {
     expect(extractTabId("[42] title — url")).toBe(42);
+    expect(extractTabId("[  42] title")).toBe(42);
     expect(extractTabId("[1] title")).toBe(1);
   });
 
@@ -227,6 +245,10 @@ describe("extractTitle", () => {
   it("works without tabId prefix", () => {
     expect(extractTitle("Example Domain — https://example.com/")).toBe("Example Domain");
   });
+
+  it("strips alignment padding", () => {
+    expect(extractTitle("[  1] Example Domain      — https://example.com/")).toBe("Example Domain");
+  });
 });
 
 describe("extractUrl", () => {
@@ -236,6 +258,10 @@ describe("extractUrl", () => {
 
   it("works without tabId prefix", () => {
     expect(extractUrl("Example Domain — https://example.com/")).toBe("https://example.com/");
+  });
+
+  it("strips alignment padding", () => {
+    expect(extractUrl("[  1] Example Domain      — https://example.com/")).toBe("https://example.com/");
   });
 
   it("handles line without title separator", () => {

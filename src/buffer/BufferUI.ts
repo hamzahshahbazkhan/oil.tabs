@@ -11,7 +11,7 @@ import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
 import type { LineKind } from "../render/primitives";
-import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
+import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { bufferDarkTheme } from "./theme";
 
@@ -33,11 +33,12 @@ export const nonEditableLines = new Set<number>();
 export const faviconMap = new Map<number, string>();
 export const lineUrlMap = new Map<number, string>();
 export const lineKinds = new Map<number, LineKind>();
+export let titleColumn = 0;
 
 function updateStatusBar(): void {
   const text = view.state.doc.toString();
   const tabLines = text.split("\n").filter((l) => l.includes(" — "));
-  const windowHeaders = text.split("\n").filter((l) => l.startsWith("── Window"));
+  const windowHeaders = text.split("\n").filter((l) => l.startsWith("Window "));
   let opsSummary = "";
   if (lastSnapshot) {
     const parsed = parse(text, lastUrlMap);
@@ -126,6 +127,7 @@ function updateMaps(snapshot: Snapshot, folders: FolderInfo[], tabFolderMap: Rec
   for (const [k, v] of newData.lineUrlMap) lineUrlMap.set(k, v);
   lineKinds.clear();
   for (const [k, v] of newData.lineKinds) lineKinds.set(k, v);
+  titleColumn = newData.titleColumn;
 }
 
 function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[], replaceDoc?: boolean): void {
@@ -260,6 +262,7 @@ export function setupBufferUI(): void {
           vim(),
           bufferDarkTheme,
           headerLineDeco,
+          sectionLineDeco,
           nonEditableLineDeco,
           urlColorDeco,
           faviconDeco,

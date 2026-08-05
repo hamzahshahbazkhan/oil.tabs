@@ -8,24 +8,26 @@ export type LineKind =
 
 export interface RenderedLine {
   kind: LineKind;
-  text: string;
-  tabId?: number;
+  text?: string;
   title?: string;
+  meta?: string;
+  tabId?: number;
   url?: string;
+  discarded?: boolean;
   favIconUrl?: string;
   editable?: boolean;
 }
 
 export function Header(title: string, meta?: string): RenderedLine {
-  return { kind: "header", text: `── ${title}${meta ? ` · ${meta}` : ""} ──` };
+  return { kind: "header", title, meta };
 }
 
 export function Section(text: string): RenderedLine {
-  return { kind: "section", text: `▸ ${text}` };
+  return { kind: "section", text };
 }
 
 export function Divider(): RenderedLine {
-  return { kind: "divider", text: "" };
+  return { kind: "divider" };
 }
 
 export function StatusLine(text: string): RenderedLine {
@@ -42,14 +44,12 @@ export interface TabRowInput {
 }
 
 export function TabRow(line: TabRowInput): RenderedLine {
-  const title = line.discarded ? `[sleep] ${line.title}` : line.title;
-  const tag = line.tabId !== null ? `[${line.tabId}] ` : "";
   return {
     kind: "tabRow",
-    text: `${tag}${title} — ${line.url}`,
     tabId: line.tabId ?? undefined,
     title: line.title,
     url: line.url,
+    discarded: line.discarded,
     favIconUrl: line.favIconUrl,
     editable: line.editable,
   };

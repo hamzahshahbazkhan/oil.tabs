@@ -1,5 +1,7 @@
 import type { LineKind, RenderedLine } from "./primitives";
 
+const SEP_WIDTH = 72;
+
 export interface RenderedDocument {
   text: string;
   idMap: Map<number, number>;
@@ -8,6 +10,39 @@ export interface RenderedDocument {
   faviconMap: Map<number, string>;
   lineUrlMap: Map<number, string>;
   lineKinds: Map<number, LineKind>;
+  titleColumn: number;
+}
+
+function lineText(line: RenderedLine, idWidth: number, titleWidth: number): string {
+  switch (line.kind) {
+    case "header": {
+      const label = line.meta ? `${line.title} │ ${line.meta}` : line.title ?? "";
+      const rules = Math.max(1, SEP_WIDTH - label.length - 1);
+      return `${label} ${"─".repeat(rules)}`;
+    }
+    case "section":
+      return `▸ ${line.text}`;
+    case "divider":
+    case "statusLine":
+    case "emptyState":
+      return line.text ?? "";
+    case "tabRow": {
+      const idText = line.tabId === undefined
+        ? " ".repeat(idWidth)
+        : `[${String(line.tabId).padStart(idWidth - 2, " ")}]`;
+      const titlePart = line.title ?? line.url ?? "";
+      const tagPart = line.discarded ? " [sleep]" : "";
+      const pad = Math.max(0, titleWidth - titlePart.length - tagPart.length);
+      return `${idText} ${titlePart}${tagPart}${" ".repeat(pad)} — ${line.url ?? ""}`;
+    }
+  }
+}
+
+function measureTitle(line: RenderedLine): number {
+  if (line.kind !== "tabRow") return 0;
+  const titlePart = line.title ?? "";
+  const tagPart = line.discarded ? " [sleep]" : "";
+  return titlePart.length + tagPart.length;
 }
 
 export function composeDocument(lines: RenderedLine[]): RenderedDocument {
@@ -19,12 +54,26 @@ export function composeDocument(lines: RenderedLine[]): RenderedDocument {
   const lineKinds = new Map<number, LineKind>();
   const textLines: string[] = [];
 
+  let idWidth = 2;
+  let titleWidth = 0;
+  for (const line of lines) {
+    if (line.kind !== "tabRow") continue;
+    if (line.tabId !== undefined) {
+      idWidth = Math.max(idWidth, `[${line.tabId}]`.length);
+    }
+    titleWidth = Math.max(titleWidth, measureTitle(line));
+  }
+
   let count = lines.length;
-  while (count > 0 && lines[count - 1].text === "") count--;
+  while (count > 0) {
+    const last = lines[count - 1];
+    if (last.kind === "divider" || last.text === "") count--;
+    else break;
+  }
 
   for (let i = 0; i < count; i++) {
     const line = lines[i];
-    textLines.push(line.text);
+    textLines.push(lineText(line, idWidth, titleWidth));
     const num = textLines.length;
     lineKinds.set(num, line.kind);
 
@@ -49,5 +98,6 @@ export function composeDocument(lines: RenderedLine[]): RenderedDocument {
     faviconMap,
     lineUrlMap,
     lineKinds,
+    titleColumn: idWidth + 1,
   };
 }

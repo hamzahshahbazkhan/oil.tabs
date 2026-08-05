@@ -1,13 +1,14 @@
 import type { ParsedLine } from "../shared/types";
 
-const WINDOW_HEADER_RE = /^── Window (\d+) · (\d+) tabs? ──$/;
+const WINDOW_HEADER_RE = /^Window (\d+) │ (\d+) tabs? ─+$/;
 const GROUP_HEADER_RE = /^▸ Group: (\d+)$/;
 const FOLDER_HEADER_RE = /^▸ Folder: (.+)$/;
-const SAVED_HEADER_RE = /^── Saved For Later · (\d+) items? ──$/;
-const TAB_ID_RE = /^\[\d+\]\s*/;
+const SAVED_HEADER_RE = /^▸ Saved/;
+const RULE_LINE_RE = /─{3,}$/;
+const TAB_ID_RE = /^\[\s*\d+\]\s*/;
 
 export function extractTabId(line: string): number | null {
-  const match = line.match(/^\[(\d+)\]/);
+  const match = line.match(/^\[\s*(\d+)\]/);
   return match ? parseInt(match[1], 10) : null;
 }
 
@@ -89,6 +90,8 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
       currentGroupId = null;
       continue;
     }
+
+    if (line.match(RULE_LINE_RE)) continue;
 
     if (line.trim() === "") continue;
 

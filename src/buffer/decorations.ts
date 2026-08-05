@@ -5,7 +5,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines, faviconMap, idMap, lineUrlMap, lineKinds } from "./BufferUI";
+import { nonEditableLines, faviconMap, idMap, lineUrlMap, lineKinds, titleColumn } from "./BufferUI";
 import { extractUrl } from "../model/Parser";
 
 class FaviconWidget extends WidgetType {
@@ -28,6 +28,7 @@ class FaviconWidget extends WidgetType {
 }
 
 const TAB_LINE_RE = / — /;
+const URL_MUTED = Decoration.mark({ class: "cm-urlMuted" });
 
 const brandColors: Record<string, string> = {
   "youtube.com": "#ff0000",
@@ -115,13 +116,24 @@ function buildUrlColorDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
-    const kind = lineKinds.get(i);
-    if (kind !== "tabRow" && kind !== "statusLine") continue;
+    if (lineKinds.get(i) !== "tabRow") continue;
     if (!TAB_LINE_RE.test(line.text)) continue;
+
+    const dashIdx = line.text.lastIndexOf(" — ");
+    if (dashIdx === -1) continue;
+
     const url = extractUrl(line.text);
     const color = getDomainColor(url);
-    if (color) {
-      builder.add(line.from, line.from, Decoration.line({ attributes: { style: `color: ${color}` } }));
+
+    const titleStart = line.from + titleColumn;
+    const titleEnd = line.from + dashIdx;
+    if (titleStart < titleEnd && color) {
+      builder.add(titleStart, titleEnd, Decoration.mark({ attributes: { style: `color: ${color}` } }));
+    }
+
+    const urlStart = line.from + dashIdx + 3;
+    if (urlStart < line.to) {
+      builder.add(urlStart, line.to, URL_MUTED);
     }
   }
   return builder.finish();
@@ -168,6 +180,28 @@ function buildHeaderDecorations(state: EditorState): DecorationSet {
   const deco = Decoration.line({ class: "cm-headerLine" });
   for (let i = 1; i <= state.doc.lines; i++) {
     if (lineKinds.get(i) !== "header") continue;
+    const line = state.doc.line(i);
+    builder.add(line.from, line.from, deco);
+  }
+  return builder.finish();
+}
+
+export const sectionLineDeco = StateField.define<DecorationSet>({
+  create(state: EditorState) {
+    return buildSectionDecorations(state);
+  },
+  update(deco: DecorationSet, tr) {
+    if (tr.docChanged) return buildSectionDecorations(tr.state);
+    return deco.map(tr.changes);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+function buildSectionDecorations(state: EditorState): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  const deco = Decoration.line({ class: "cm-sectionLine" });
+  for (let i = 1; i <= state.doc.lines; i++) {
+    if (lineKinds.get(i) !== "section") continue;
     const line = state.doc.line(i);
     builder.add(line.from, line.from, deco);
   }

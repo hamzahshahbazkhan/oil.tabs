@@ -33,12 +33,20 @@ export const bufferDarkTheme = EditorView.theme({
     backgroundColor: "#1a1c2e",
   },
   ".cm-headerLine": {
-    backgroundColor: "#16182a",
-    color: "#7aa2f7",
+    backgroundColor: "#7aa2f7",
+    color: "#1a1b26",
     fontWeight: 600,
   },
+  ".cm-sectionLine": {
+    color: "#737aa2",
+    fontWeight: 600,
+  },
+  ".cm-urlMuted": {
+    color: "#565f89",
+  },
   ".cm-headerLine .cm-lineNumbers .cm-gutterElement": {
-    color: "#7aa2f7",
+    backgroundColor: "#7aa2f7",
+    color: "#1a1b26",
   },
   ".cm-nonEditable": {
     opacity: 0.35,
@@ -80,11 +88,14 @@ export const bufferDarkTheme = EditorView.theme({
   ".cm-scroller": {
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Menlo', monospace",
     fontSize: "13px",
-    lineHeight: "1.6",
+    lineHeight: "1.7",
   },
   ".cm-content": {
     caretColor: "#f7768e",
-    padding: "4px 0",
+    padding: "12px 0",
+  },
+  ".cm-line": {
+    padding: "2px 24px 2px 8px",
   },
   ".cm-panels": {
     backgroundColor: "#1a1c2e",
