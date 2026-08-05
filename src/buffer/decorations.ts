@@ -5,7 +5,7 @@ import {
   EditorView,
   WidgetType,
 } from "@codemirror/view";
-import { nonEditableLines, faviconMap, idMap, lineUrlMap } from "./BufferUI";
+import { nonEditableLines, faviconMap, idMap, lineUrlMap, lineKinds } from "./BufferUI";
 import { extractUrl } from "../model/Parser";
 
 class FaviconWidget extends WidgetType {
@@ -27,7 +27,6 @@ class FaviconWidget extends WidgetType {
   ignoreEvent() { return true; }
 }
 
-const WINDOW_HEADER_RE = /^── Window \d+/;
 const TAB_LINE_RE = / — /;
 
 const brandColors: Record<string, string> = {
@@ -116,6 +115,8 @@ function buildUrlColorDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
+    const kind = lineKinds.get(i);
+    if (kind !== "tabRow" && kind !== "statusLine") continue;
     if (!TAB_LINE_RE.test(line.text)) continue;
     const url = extractUrl(line.text);
     const color = getDomainColor(url);
@@ -166,10 +167,9 @@ function buildHeaderDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   const deco = Decoration.line({ class: "cm-headerLine" });
   for (let i = 1; i <= state.doc.lines; i++) {
+    if (lineKinds.get(i) !== "header") continue;
     const line = state.doc.line(i);
-    if (WINDOW_HEADER_RE.test(line.text)) {
-      builder.add(line.from, line.from, deco);
-    }
+    builder.add(line.from, line.from, deco);
   }
   return builder.finish();
 }

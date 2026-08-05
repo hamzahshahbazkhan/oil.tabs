@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatSnapshot } from "../src/model/Formatter";
+import { formatSnapshot } from "../src/render/tabs";
 import { parse, extractTabId, extractTitle, extractUrl } from "../src/model/Parser";
 import type { Snapshot } from "../src/shared/types";
 

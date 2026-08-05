@@ -1,7 +1,7 @@
 import browser from "webextension-polyfill";
 import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow, discardTab } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
-import { formatSnapshot } from "../model/Formatter";
+import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
 import { plan } from "../engine/Planner";
 import { execute } from "../engine/Executor";

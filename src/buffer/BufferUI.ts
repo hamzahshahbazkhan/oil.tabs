@@ -4,12 +4,13 @@ import { keymap, lineNumbers } from "@codemirror/view";
 import { vim, getCM } from "@replit/codemirror-vim";
 import { Prec, EditorState } from "@codemirror/state";
 import { parse } from "../model/Parser";
-import { formatSnapshot } from "../model/Formatter";
+import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Operation, Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
+import type { LineKind } from "../render/primitives";
 import { headerLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { bufferDarkTheme } from "./theme";
@@ -31,6 +32,7 @@ export const idMap = new Map<number, number>();
 export const nonEditableLines = new Set<number>();
 export const faviconMap = new Map<number, string>();
 export const lineUrlMap = new Map<number, string>();
+export const lineKinds = new Map<number, LineKind>();
 
 function updateStatusBar(): void {
   const text = view.state.doc.toString();
@@ -122,6 +124,8 @@ function updateMaps(snapshot: Snapshot, folders: FolderInfo[], tabFolderMap: Rec
   for (const [k, v] of newData.faviconMap) faviconMap.set(k, v);
   lineUrlMap.clear();
   for (const [k, v] of newData.lineUrlMap) lineUrlMap.set(k, v);
+  lineKinds.clear();
+  for (const [k, v] of newData.lineKinds) lineKinds.set(k, v);
 }
 
 function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap?: Record<number, number>, savedItems?: SavedItem[], replaceDoc?: boolean): void {
