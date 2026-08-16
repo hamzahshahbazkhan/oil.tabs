@@ -1,10 +1,6 @@
 import type { Operation, Snapshot } from "../shared/types";
 
-export type WindowOperation =
-  | { kind: "createWindow"; windowId: number };
-
 type Stage =
-  | "createWindow"
   | "create"
   | "crossWindowMove"
   | "sameWindowMove"
@@ -19,7 +15,6 @@ type Stage =
   | "restoreFromSaved";
 
 const STAGE_ORDER: Stage[] = [
-  "createWindow",
   "create",
   "crossWindowMove",
   "sameWindowMove",
@@ -37,7 +32,6 @@ const STAGE_ORDER: Stage[] = [
 export function plan(
   ops: Operation[],
   snapshot: Snapshot,
-  extraWindowOps?: WindowOperation[],
 ): Operation[] {
   const tabWindow = new Map<number, number>();
   for (const line of snapshot.lines) {
@@ -106,12 +100,6 @@ export function plan(
 
       default:
         badKind(op);
-    }
-  }
-
-  if (extraWindowOps) {
-    for (const wop of extraWindowOps) {
-      buckets.get("createWindow")!.push(wop as unknown as Operation);
     }
   }
 
