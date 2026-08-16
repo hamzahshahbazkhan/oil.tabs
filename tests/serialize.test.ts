@@ -23,18 +23,19 @@ const dupFixture: Snapshot = {
 
 // First tab row within a window starts at index 1 (window header is line 0).
 const ROW = 1;
+const hiddenId = (id: number): string => `\u2063${id.toString(2).replace(/0/g, "\u200B").replace(/1/g, "\u200C")}\u2064`;
 
 describe("formatSnapshot", () => {
   it("starts with the window header and aligns columns", () => {
     const { text } = formatSnapshot(fixture);
     const lines = text.split("\n");
     expect(lines[0]).toBe(`Window 1 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[1]).toBe(`\u20631\u2063Example Domain — https://example.com/`);
-    expect(lines[2]).toBe(`\u20632\u2063GitHub${" ".repeat(8)} — https://github.com/`);
+    expect(lines[1]).toBe(`${hiddenId(1)}Example Domain — https://example.com/`);
+    expect(lines[2]).toBe(`${hiddenId(2)}GitHub${" ".repeat(8)} — https://github.com/`);
     expect(lines[3]).toBe("");
     expect(lines[4]).toBe(`Window 2 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[5]).toBe(`\u20633\u2063Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
-    expect(lines[6]).toBe(`\u20634\u2063Gmail${" ".repeat(9)} — https://mail.google.com/`);
+    expect(lines[5]).toBe(`${hiddenId(3)}Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
+    expect(lines[6]).toBe(`${hiddenId(4)}Gmail${" ".repeat(9)} — https://mail.google.com/`);
     expect(lines).toHaveLength(7);
   });
 

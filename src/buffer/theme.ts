@@ -1,12 +1,12 @@
 import { EditorView } from "@codemirror/view";
 
 export const bufferDarkTheme = EditorView.theme({
-  "&": { backgroundColor: "transparent", color: "#d8def8" },
+  "&": { backgroundColor: "#111522", color: "#d8def8" },
   "&.cm-focused": { outline: "none" },
   ".cm-cursor": { borderLeftColor: "#f5bde6", borderLeftWidth: "2px" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#34466f !important" },
   ".cm-gutters": {
-    backgroundColor: "transparent",
+    backgroundColor: "#111522",
     color: "#4e5778",
     border: "none",
     borderRight: "1px solid rgba(126, 145, 196, .12)",
@@ -14,10 +14,10 @@ export const bufferDarkTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px 0 16px", fontSize: "11px" },
   ".cm-activeLineGutter": { backgroundColor: "rgba(138, 173, 244, .08)", color: "#9aa6cf" },
   ".cm-activeLine": { backgroundColor: "rgba(138, 173, 244, .055)" },
-  ".cm-headerLine": { backgroundColor: "#293d66", color: "#d8def8", fontWeight: 600 },
+  ".cm-headerLine": { backgroundColor: "#202b45", color: "#d8def8", fontWeight: 600 },
   ".cm-sectionLine": { color: "#a5b4e8", fontWeight: 600 },
   ".cm-urlMuted": { color: "#697398" },
-  ".cm-headerLine .cm-lineNumbers .cm-gutterElement": { backgroundColor: "#293d66", color: "#d8def8" },
+  ".cm-headerLine .cm-lineNumbers .cm-gutterElement": { backgroundColor: "#202b45", color: "#d8def8" },
   ".cm-nonEditable": { opacity: 0.62, pointerEvents: "none" },
   "img.cm-favicon": { width: "16px", height: "16px", verticalAlign: "middle", marginRight: "7px", marginLeft: "2px", borderRadius: "4px" },
   "span.cm-favicon-placeholder": { display: "inline-block", backgroundColor: "#3d4b73", width: "16px", height: "16px", verticalAlign: "middle", marginRight: "7px", marginLeft: "2px", borderRadius: "4px" },

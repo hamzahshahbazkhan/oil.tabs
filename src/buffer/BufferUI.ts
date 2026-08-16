@@ -96,7 +96,7 @@ function renderPicker(): void {
   const matches: { line: number; score: number; text: string }[] = [];
   for (let line = 1; line <= view.state.doc.lines; line++) {
     if (nonEditableLines.has(line)) continue;
-    const text = view.state.doc.line(line).text.replace(/^\u2063\d+\u2063/, "");
+    const text = view.state.doc.line(line).text.replace(/^\u2063[\u200B\u200C]+\u2064/, "");
     const score = fuzzyScore(query, text);
     if (score !== null) matches.push({ line, score, text });
   }
