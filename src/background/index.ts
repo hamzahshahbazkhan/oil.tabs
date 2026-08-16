@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageSessionGet, storageSessionSet, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
 import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
@@ -39,6 +39,7 @@ async function loadSavedItems(): Promise<SavedItem[]> {
 }
 
 const MRU_MAX = 50;
+const ACTIVE_BUFFER_KEY = "activeBufferTabId";
 
 function isTabId(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
@@ -112,6 +113,8 @@ browser.tabs.onRemoved.addListener(async (tabId) => {
   if (await getBufferTabId() !== tabId) return;
   await storageSessionRemove(["bufferTabId", "bufferWindowId"]);
   await refreshBufferTabId();
+  const active = await storageSessionGet(ACTIVE_BUFFER_KEY);
+  if (active[ACTIVE_BUFFER_KEY] === tabId) await storageSessionRemove(ACTIVE_BUFFER_KEY);
 });
 
 browser.action.onClicked.addListener(async () => {
@@ -156,6 +159,20 @@ browser.runtime.onMessage.addListener(
   async (message: any, sender: browser.Runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
+        const senderTabId = sender.tab?.id;
+        if (senderTabId === undefined) return;
+        const active = await storageSessionGet(ACTIVE_BUFFER_KEY);
+        const activeTabId = active[ACTIVE_BUFFER_KEY];
+        if (typeof activeTabId === "number" && activeTabId !== senderTabId) {
+          try {
+            await browser.tabs.get(activeTabId);
+            await browser.tabs.sendMessage(senderTabId, { type: "BUFFER_CONFLICT" } satisfies BgToBuffer);
+            return;
+          } catch {
+            await storageSessionRemove(ACTIVE_BUFFER_KEY);
+          }
+        }
+        await storageSessionSet({ [ACTIVE_BUFFER_KEY]: senderTabId });
         await refreshBufferTabId();
         const snapshot = syncInited ? getSnapshot() : await takeSnapshot();
         const folderData = await loadFolderData();
@@ -166,7 +183,7 @@ browser.runtime.onMessage.addListener(
         }
         const response: BgToBuffer = { type: "SNAPSHOT", snapshot, folders: folderData.folders, tabFolderMap: folderData.tabFolderMap, savedItems };
         try {
-          await browser.tabs.sendMessage(sender.tab!.id!, response);
+          await browser.tabs.sendMessage(senderTabId, response);
         } catch {
           // Tab may have closed
         }

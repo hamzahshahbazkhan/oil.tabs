@@ -134,6 +134,14 @@ function showStaleBanner(): void {
   if (el) el.style.display = "";
 }
 
+function showConflictBanner(): void {
+  const el = document.getElementById("staleBanner");
+  if (el) {
+    el.textContent = "Another tab-oil buffer is already open — close this tab to avoid conflicts.";
+    el.style.display = "";
+  }
+}
+
 function hideStaleBanner(): void {
   const el = document.getElementById("staleBanner");
   if (el) el.style.display = "none";
@@ -477,6 +485,9 @@ export function setupBufferUI(): void {
           break;
         case "SNAPSHOT_UPDATED":
           applySnapshotUpdate(message.snapshot, message.folders, message.tabFolderMap, message.savedItems);
+          break;
+        case "BUFFER_CONFLICT":
+          showConflictBanner();
           break;
       }
     });
