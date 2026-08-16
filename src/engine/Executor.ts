@@ -16,6 +16,7 @@ function tabIdOf(op: Operation): number | null {
     case "create":
     case "restoreFromSaved":
     case "saveForLater":
+    case "deleteSaved":
       return null;
     default:
       return op.tabId;
@@ -279,6 +280,20 @@ async function execRestoreFromSaved(op: Operation & { kind: "restoreFromSaved" }
   };
 }
 
+async function execDeleteSaved(op: Operation & { kind: "deleteSaved" }): Promise<JournalEntry> {
+  const { savedForLater } = await storageLocalGet("savedForLater");
+  const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
+  const removed = list.filter((item) => item.url === op.url);
+  await storageLocalSet({ savedForLater: list.filter((item) => item.url !== op.url) });
+  return {
+    description: `delete saved item ${op.url}`,
+    rollback: async () => {
+      const current = await storageLocalGet("savedForLater");
+      await storageLocalSet({ savedForLater: [...((current.savedForLater ?? []) as typeof removed), ...removed] });
+    },
+  };
+}
+
 export async function execute(
   ops: Operation[],
   preSnapshot: Snapshot,
@@ -300,6 +315,7 @@ export async function execute(
         case "assignFolder": entry = await execAssignFolder(op); break;
         case "discard":      entry = await execDiscard(op); break;
         case "saveForLater": entry = await execSaveForLater(op); break;
+        case "deleteSaved": entry = await execDeleteSaved(op); break;
         case "bookmark":     entry = await execBookmark(op); break;
         case "restoreFromSaved": entry = await execRestoreFromSaved(op); break;
         default: {

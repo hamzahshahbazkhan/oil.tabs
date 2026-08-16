@@ -92,7 +92,7 @@ function updateStatusBar(): void {
     }
     const savedUrls = new Set(lastSavedItems.map((item) => item.url));
     const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
-    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0, saveForLater: 0, bookmark: 0, restoreFromSaved: 0 };
+    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0, saveForLater: 0, deleteSaved: 0, bookmark: 0, restoreFromSaved: 0 };
     for (const op of ops) {
       counts[op.kind]++;
     }
@@ -106,6 +106,7 @@ function updateStatusBar(): void {
     if (counts.discard) parts.push(`${counts.discard} sleep`);
     if (counts.saveForLater) parts.push(`${counts.saveForLater} save`);
     if (counts.restoreFromSaved) parts.push(`${counts.restoreFromSaved} restore`);
+    if (counts.deleteSaved) parts.push(`${counts.deleteSaved} delete saved`);
     opsSummary = parts.length ? ` │ ${parts.join(" · ")}` : "";
   }
   const el = document.getElementById("statusbar");

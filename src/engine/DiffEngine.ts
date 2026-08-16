@@ -216,12 +216,20 @@ export function diff(
     }
   }
   if (savedUrls) {
+    const restoredUrls = new Set<string>();
     const restorePos = new Map<number, number>();
     for (const line of parsed) {
       if (!line.saved && line.tabId === null && savedUrls.has(line.url)) {
+        restoredUrls.add(line.url);
         const p = restorePos.get(line.windowId) ?? 0;
         saveRestoreOps.push({ kind: "restoreFromSaved", url: line.url, title: "", windowId: line.windowId, index: p });
         restorePos.set(line.windowId, p + 1);
+      }
+    }
+    const savedInText = new Set(parsed.filter((line) => line.saved).map((line) => line.url));
+    for (const url of savedUrls) {
+      if (!savedInText.has(url) && !restoredUrls.has(url)) {
+        saveRestoreOps.push({ kind: "deleteSaved", url });
       }
     }
   }

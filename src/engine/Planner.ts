@@ -13,6 +13,7 @@ type Stage =
   | "navigate"
   | "bookmark"
   | "saveForLater"
+  | "deleteSaved"
   | "close"
   | "discard"
   | "restoreFromSaved";
@@ -27,6 +28,7 @@ const STAGE_ORDER: Stage[] = [
   "navigate",
   "bookmark",
   "saveForLater",
+  "deleteSaved",
   "close",
   "discard",
   "restoreFromSaved",
@@ -89,6 +91,10 @@ export function plan(
 
       case "saveForLater":
         buckets.get("saveForLater")!.push(op);
+        break;
+
+      case "deleteSaved":
+        buckets.get("deleteSaved")!.push(op);
         break;
 
       case "move": {

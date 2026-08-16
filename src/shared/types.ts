@@ -20,6 +20,7 @@ export type Operation =
   | { kind: "assignFolder"; tabId: number; folderId: number | null }
   | { kind: "discard"; tabId: number }
   | { kind: "saveForLater"; tabId: number | null; url: string; title: string }
+  | { kind: "deleteSaved"; url: string }
   | { kind: "bookmark"; tabId: number; url: string; title: string }
   | { kind: "restoreFromSaved"; url: string; title: string; windowId: number; index: number };
 
