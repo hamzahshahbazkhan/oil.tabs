@@ -7,6 +7,8 @@ import {
   getBufferTabId,
   sendMessage,
   storageLocalGet,
+  hasTabUngroup,
+  ungroupTabs,
 } from "../adapter/BrowserAdapter";
 
 let currentSnapshot: Snapshot = { takenAt: 0, lines: [] };
@@ -164,6 +166,15 @@ async function onTabCreated(tab: browser.Tabs.Tab): Promise<void> {
     currentTab = await browser.tabs.get(tab.id);
   } catch {
     // The tab may have been closed immediately; use the event snapshot.
+  }
+  if (hasTabUngroup && currentTab.groupId !== undefined && currentTab.groupId > -1) {
+    try {
+      await ungroupTabs([tab.id]);
+      currentTab = await browser.tabs.get(tab.id);
+    } catch {
+      // Group cleanup is best-effort; keep tracking the tab if the browser
+      // rejects the operation or the tab closes during creation.
+    }
   }
   const line = tabToBufferLine(currentTab);
   if (line.tabId === null) return;
