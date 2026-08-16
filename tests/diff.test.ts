@@ -212,7 +212,8 @@ describe("diff", () => {
     ];
     const valid = validateMoveOps([...invalidMoves, ...validMoves], old);
     expect(valid).toHaveLength(1);
-    expect(valid[0].tabId).toBe(1);
+    expect(valid[0].kind).toBe("move");
+    if (valid[0].kind === "move") expect(valid[0].tabId).toBe(1);
   });
 
   it("removing groupId produces NONE group op", () => {

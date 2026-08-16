@@ -159,7 +159,7 @@ describe("execute", () => {
     ];
     const result = await execute(ops, snapshot());
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("does not exist in the snapshot");
+    if (!result.ok) expect(result.error).toContain("does not exist in the snapshot");
   });
 
   it("validation fails for non-existent target window", async () => {
@@ -168,7 +168,7 @@ describe("execute", () => {
     ];
     const result = await execute(ops, snapshot());
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("does not exist in the snapshot");
+    if (!result.ok) expect(result.error).toContain("does not exist in the snapshot");
   });
 
   it("failure rolls back prior operations", async () => {
@@ -183,7 +183,7 @@ describe("execute", () => {
     ];
     const result = await execute(ops, snapshot([{ tabId: 1, windowId: 1 }, { tabId: 2, windowId: 1 }]));
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("Failed to close tab 2");
+    if (!result.ok) expect(result.error).toContain("Failed to close tab 2");
     // Tab 1 close was rolled back (recreated via tabs.create)
     expect(mockTabsRemove).toHaveBeenCalledTimes(2);       // both close ops attempted
     expect(mockTabsCreate).toHaveBeenCalledTimes(1);       // rollback create of tab 1

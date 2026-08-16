@@ -59,8 +59,8 @@ async function execClose(op: Operation & { kind: "close" }): Promise<JournalEntr
     rollback: async () => {
       await createTab({
         url: before.url,
-        windowId: before.windowId,
-        index: before.index,
+        windowId: before.windowId!,
+        index: before.index!,
         active: false,
       });
     },
@@ -74,7 +74,7 @@ async function execMove(op: Operation & { kind: "move" }): Promise<JournalEntry>
   return {
     description: `move tab ${op.tabId}`,
     rollback: async () => {
-      await moveTab(op.tabId, { windowId: before.windowId, index: before.index });
+      await moveTab(op.tabId, { windowId: before.windowId!, index: before.index! });
     },
   };
 }
@@ -186,7 +186,7 @@ async function execSaveForLater(op: Operation & { kind: "saveForLater" }): Promi
   if (op.tabId !== null) {
     try {
       const t = await getTab(op.tabId);
-      beforeTab = { url: t.url ?? "", windowId: t.windowId, index: t.index };
+      beforeTab = { url: t.url ?? "", windowId: t.windowId!, index: t.index! };
     } catch {
       // Tab may already be gone
     }
@@ -221,7 +221,7 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
   let beforeTab: { url: string; windowId: number; index: number } | null = null;
   try {
     const t = await getTab(op.tabId);
-    beforeTab = { url: t.url ?? "", windowId: t.windowId, index: t.index };
+    beforeTab = { url: t.url ?? "", windowId: t.windowId!, index: t.index! };
   } catch {
     // Tab may already be gone
   }

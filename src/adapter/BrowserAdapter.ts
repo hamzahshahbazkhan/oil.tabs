@@ -25,14 +25,14 @@ export async function createTab(params: {
   index: number;
   active?: boolean;
 }): Promise<browser.Tabs.Tab> {
-  return browser.tabs.create(params);
+  return (await browser.tabs.create(params)) as browser.Tabs.Tab;
 }
 
 export async function moveTab(
   tabId: number,
   params: { windowId: number; index: number },
-): Promise<browser.tabs.Tab> {
-  return browser.tabs.move(tabId, params);
+): Promise<browser.Tabs.Tab> {
+  return (await browser.tabs.move(tabId, params)) as browser.Tabs.Tab;
 }
 
 export async function updateTab(
@@ -54,8 +54,8 @@ export async function groupTabs(params: {
 }
 
 export async function queryTabs(
-  params: browser.tabs.QueryQueryInfo,
-): Promise<browser.tabs.Tab[]> {
+  params: browser.Tabs.QueryQueryInfoType,
+): Promise<browser.Tabs.Tab[]> {
   return browser.tabs.query(params);
 }
 
@@ -64,7 +64,7 @@ export async function queryTabs(
 export async function createBookmark(params: {
   title: string;
   url: string;
-}): Promise<browser.bookmarks.BookmarkTreeNode> {
+}): Promise<browser.Bookmarks.BookmarkTreeNode> {
   return browser.bookmarks.create(params);
 }
 
@@ -114,18 +114,18 @@ export async function storageSyncGet(
 
 export async function getWindow(
   windowId: number,
-): Promise<browser.windows.Window> {
+): Promise<browser.Windows.Window> {
   return browser.windows.get(windowId, { populate: false });
 }
 
 export async function updateWindow(
   windowId: number,
   params: { focused?: boolean },
-): Promise<browser.windows.Window> {
+): Promise<browser.Windows.Window> {
   return browser.windows.update(windowId, params);
 }
 
-export async function getLastFocusedWindow(): Promise<browser.windows.Window> {
+export async function getLastFocusedWindow(): Promise<browser.Windows.Window> {
   return browser.windows.getLastFocused();
 }
 
@@ -136,7 +136,7 @@ export async function createWindow(params: {
   height: number;
   left: number;
   top: number;
-}): Promise<browser.windows.Window> {
+}): Promise<browser.Windows.Window> {
   return browser.windows.create(params);
 }
 

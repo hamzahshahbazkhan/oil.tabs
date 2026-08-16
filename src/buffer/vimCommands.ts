@@ -4,15 +4,19 @@ import { Vim } from "@replit/codemirror-vim";
 import { idMap, nonEditableLines } from "./BufferUI";
 import { extractUrl, extractTitle, normalizeUrl } from "../model/Parser";
 
+// The package's declarations lag its runtime API (notably Ex callbacks and mapCommand).
+// Keep the compatibility boundary local instead of weakening the rest of the codebase.
+const VimCompat = Vim as any;
+
 export function setupVimCommands(
   view: EditorView,
   save: (force: boolean) => void,
   focusTab: (tabId: number) => void,
 ): void {
-  Vim.defineEx("w", "w", () => save(false));
-  Vim.defineEx("w!", "w!", () => save(true));
+  VimCompat.defineEx("w", "w", () => save(false));
+  VimCompat.defineEx("w!", "w!", () => save(true));
 
-  Vim.defineAction("focusTab", (_cm: EditorView) => {
+  VimCompat.defineAction("focusTab", (_cm: EditorView) => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
     const tabId = idMap.get(line.number);
@@ -21,13 +25,13 @@ export function setupVimCommands(
     }
   });
 
-  Vim.mapCommand("gx", "action", "focusTab");
+  VimCompat.mapCommand("gx", "action", "focusTab");
 
-  Vim.defineAction("refresh", () => {
+  VimCompat.defineAction("refresh", () => {
     browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
   });
 
-  Vim.mapCommand("gr", "action", "refresh");
+  VimCompat.mapCommand("gr", "action", "refresh");
 
   const copyToClipboard = (text: string, onResult: (ok: boolean) => void): void => {
     const transferred = (ok: boolean): void => onResult(ok);
@@ -63,17 +67,17 @@ export function setupVimCommands(
     }, 2500);
   };
 
-  Vim.defineAction("yankUrl", (_cm: EditorView) => {
+  VimCompat.defineAction("yankUrl", (_cm: EditorView) => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
     const url = extractUrl(line.text);
-    Vim.registerController.pushText('"', 'y', line.text + "\n", true);
+    VimCompat.registerController.pushText('"', 'y', line.text + "\n", true);
     copyToClipboard(url, (ok) => flashStatus(ok ? `yanked URL: ${url}` : "clipboard blocked — failed to copy"));
   });
 
-  Vim.mapCommand("yy", "action", "yankUrl");
+  VimCompat.mapCommand("yy", "action", "yankUrl");
 
-  Vim.defineEx("tab", "ta", (arg: string) => {
+  VimCompat.defineEx("tab", "ta", (arg: string) => {
     if (!arg || arg.trim() === "") return;
     const q = arg.trim().toLowerCase();
     for (let i = 1; i <= view.state.doc.lines; i++) {
@@ -92,7 +96,7 @@ export function setupVimCommands(
     }
   });
 
-  Vim.defineAction("moveLineDown", () => {
+  VimCompat.defineAction("moveLineDown", () => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
     if (nonEditableLines.has(line.number)) return;
@@ -111,7 +115,7 @@ export function setupVimCommands(
     });
   });
 
-  Vim.defineAction("moveLineUp", () => {
+  VimCompat.defineAction("moveLineUp", () => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
     if (nonEditableLines.has(line.number)) return;
@@ -130,22 +134,22 @@ export function setupVimCommands(
     });
   });
 
-  Vim.mapCommand("J", "action", "moveLineDown");
-  Vim.mapCommand("K", "action", "moveLineUp");
+  VimCompat.mapCommand("J", "action", "moveLineDown");
+  VimCompat.mapCommand("K", "action", "moveLineUp");
 
   const closeBuffer = () => window.close();
 
-  Vim.defineAction("closeBuffer", closeBuffer);
-  Vim.mapCommand("-", "action", "closeBuffer", { context: "normal" });
+  VimCompat.defineAction("closeBuffer", closeBuffer);
+  VimCompat.mapCommand("-", "action", "closeBuffer", { context: "normal" });
 
-  Vim.defineEx("q", "q", closeBuffer);
-  Vim.defineEx("quit", "quit", closeBuffer);
+  VimCompat.defineEx("q", "q", closeBuffer);
+  VimCompat.defineEx("quit", "quit", closeBuffer);
 
-  Vim.defineEx("cnext", "cn", () => {
+  VimCompat.defineEx("cnext", "cn", () => {
     browser.runtime.sendMessage({ type: "CYCLE_NEXT" });
   });
 
-  Vim.defineEx("cprev", "cp", () => {
+  VimCompat.defineEx("cprev", "cp", () => {
     browser.runtime.sendMessage({ type: "CYCLE_PREV" });
   });
 
@@ -166,22 +170,22 @@ export function setupVimCommands(
     return tabIds;
   };
 
-  Vim.defineEx("bookmark", "bm", () => {
+  VimCompat.defineEx("bookmark", "bm", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "BOOKMARK_TABS", tabIds });
   });
 
-  Vim.defineEx("open", "e", (arg: string) => {
+  VimCompat.defineEx("open", "e", (arg: string) => {
     const url = normalizeUrl(arg.trim());
     if (url) browser.runtime.sendMessage({ type: "OPEN_TAB", url });
   });
 
-  Vim.defineEx("reload", "rel", () => {
+  VimCompat.defineEx("reload", "rel", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "RELOAD_TABS", tabIds });
   });
 
-  Vim.defineEx("sleep", "sl", () => {
+  VimCompat.defineEx("sleep", "sl", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) {
       browser.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });

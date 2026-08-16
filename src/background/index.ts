@@ -150,7 +150,7 @@ browser.commands.onCommand.addListener(async (command) => {
   if (match) {
     const idx = Number(match[1]);
     const { globalShortcuts } = await browser.storage.sync.get("globalShortcuts");
-    const shortcuts: { key: string; action: string; url: string }[] = globalShortcuts ?? [];
+    const shortcuts = (globalShortcuts ?? []) as { key: string; action: string; url: string }[];
     if (idx < shortcuts.length) {
       const s = shortcuts[idx];
       if (s.action === "cycleNext") await cycleTab("next");
@@ -161,7 +161,7 @@ browser.commands.onCommand.addListener(async (command) => {
 });
 
 browser.runtime.onMessage.addListener(
-  async (message: any, sender: browser.runtime.MessageSender) => {
+  async (message: any, sender: browser.Runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
         await refreshBufferTabId();

@@ -204,7 +204,7 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
     programmaticDispatch = false;
   }
 
-  let newPos: number;
+  let newPos = Math.min(prevCursor, Math.max(0, view.state.doc.length - 1));
   if (prevTabId !== undefined) {
     let found = false;
     for (let i = 1; i <= view.state.doc.lines; i++) {
@@ -424,7 +424,8 @@ export function setupBufferUI(): void {
 
     setupVimCommands(view, save, focusTab);
 
-    browser.runtime.onMessage.addListener((message: BgToBuffer) => {
+    browser.runtime.onMessage.addListener((rawMessage: unknown) => {
+      const message = rawMessage as BgToBuffer;
       switch (message.type) {
         case "SNAPSHOT":
           hideStaleBanner();

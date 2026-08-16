@@ -103,7 +103,7 @@ export function diff(
       closeOps.push({ kind: "close", tabId });
     }
   }
-  const closedIds = new Set(closeOps.map((op) => op.tabId));
+  const closedIds = new Set(closeOps.map((op) => op.kind === "close" ? op.tabId : -1));
 
   const tabIndexWithinWindow = new Map<number, number>();
   const createOps: Operation[] = [];

@@ -18,14 +18,14 @@ let registered = false;
 
 const pendingDetach = new Map<number, BufferLine>();
 
-function favIconUrl(tab: browser.tabs.Tab): string | undefined {
+function favIconUrl(tab: browser.Tabs.Tab): string | undefined {
   const url = tab.favIconUrl;
   return url && (url.startsWith("http") || url.startsWith("data:"))
     ? url
     : undefined;
 }
 
-function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
+function tabToBufferLine(tab: browser.Tabs.Tab): BufferLine {
   return {
     tabId: tab.id!,
     windowId: tab.windowId!,
@@ -145,7 +145,7 @@ export async function refreshBufferTabId(): Promise<void> {
   bufferTabId_ = await getBufferTabId();
 }
 
-async function onTabCreated(tab: browser.tabs.Tab): Promise<void> {
+async function onTabCreated(tab: browser.Tabs.Tab): Promise<void> {
   if (
     tab.id === undefined ||
     tab.id === bufferTabId_ ||
@@ -161,7 +161,7 @@ async function onTabCreated(tab: browser.tabs.Tab): Promise<void> {
 
 async function onTabRemoved(
   tabId: number,
-  _info: browser.tabs.TabRemoveInfo,
+  _info: browser.Tabs.OnRemovedRemoveInfoType,
 ): Promise<void> {
   pendingDetach.delete(tabId);
   const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
@@ -173,8 +173,8 @@ async function onTabRemoved(
 
 async function onTabUpdated(
   tabId: number,
-  changeInfo: browser.tabs.TabChangeInfo,
-  tab: browser.tabs.Tab,
+  changeInfo: browser.Tabs.OnUpdatedChangeInfoType,
+  tab: browser.Tabs.Tab,
 ): Promise<void> {
   if (tabId === bufferTabId_) return;
   if (
@@ -206,7 +206,7 @@ async function onTabUpdated(
 
 async function onTabMoved(
   tabId: number,
-  moveInfo: browser.tabs.TabMoveInfo,
+  moveInfo: browser.Tabs.OnMovedMoveInfoType,
 ): Promise<void> {
   const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
@@ -221,7 +221,7 @@ async function onTabMoved(
 
 async function onTabAttached(
   tabId: number,
-  attachInfo: browser.tabs.TabAttachInfo,
+  attachInfo: browser.Tabs.OnAttachedAttachInfoType,
 ): Promise<void> {
   let line: BufferLine;
   const pending = pendingDetach.get(tabId);
@@ -246,7 +246,7 @@ async function onTabAttached(
 
 async function onTabDetached(
   tabId: number,
-  _detachInfo: browser.tabs.TabDetachInfo,
+  _detachInfo: browser.Tabs.OnDetachedDetachInfoType,
 ): Promise<void> {
   const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
