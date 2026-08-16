@@ -194,7 +194,7 @@ describe("diff", () => {
     expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: 5 });
   });
 
-  it("invalid pinned/unpinned interleave is rejected by validateMoveOps", () => {
+  it("invalid pinned/unpinned interleave is reported by validateMoveOps", () => {
     const old = makeSnapshot([
       { tabId: 1, windowId: 1, index: 0, pinned: true },
       { tabId: 2, windowId: 1, index: 1, pinned: false },
@@ -210,10 +210,7 @@ describe("diff", () => {
     const validMoves: Operation[] = [
       { kind: "move", tabId: 1, windowId: 1, index: 1 },
     ];
-    const valid = validateMoveOps([...invalidMoves, ...validMoves], old);
-    expect(valid).toHaveLength(1);
-    expect(valid[0].kind).toBe("move");
-    if (valid[0].kind === "move") expect(valid[0].tabId).toBe(1);
+    expect(() => validateMoveOps([...invalidMoves, ...validMoves], old)).toThrow("Invalid move");
   });
 
   it("removing groupId produces NONE group op", () => {

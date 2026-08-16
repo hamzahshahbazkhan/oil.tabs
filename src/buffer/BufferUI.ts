@@ -111,7 +111,13 @@ function save(force: boolean): void {
   const folderIds = new Map(lastFolders.map((folder) => [folder.name, folder.id]));
   const parsed = parse(text, lastUrlMap, folderIds);
   const savedUrls = new Set(lastSavedItems.map((item) => item.url));
-  const ops = diff(lastSnapshot, parsed, undefined, savedUrls);
+  let ops;
+  try {
+    ops = diff(lastSnapshot, parsed, undefined, savedUrls);
+  } catch (error) {
+    alert(`tab-oil error: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
   const closeCount = ops.filter((op) => op.kind === "close").length;
 
   if (!force && closeCount > largeDiffThreshold) {

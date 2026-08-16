@@ -68,8 +68,12 @@ export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Opera
     if (oldWid !== undefined && oldWid !== op.windowId && pinned) {
       count--;
     }
-    if (pinned && op.index >= count) return false;
-    if (!pinned && op.index < count) return false;
+    if (pinned && op.index >= count) {
+      throw new Error(`Invalid move for pinned tab ${op.tabId}: pinned tabs must remain before unpinned tabs.`);
+    }
+    if (!pinned && op.index < count) {
+      throw new Error(`Invalid move for unpinned tab ${op.tabId}: unpinned tabs must remain after pinned tabs.`);
+    }
     return true;
   });
 }

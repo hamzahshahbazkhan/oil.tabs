@@ -193,7 +193,8 @@ browser.runtime.onMessage.addListener(
 
       case "SAVE": {
         if (typeof message.text !== "string" || !sender.tab?.id) return;
-        await withSaveLock(async () => {
+        try {
+          await withSaveLock(async () => {
           const snapshot = await takeSnapshot();
           const { urlMap } = formatSnapshot(snapshot);
 
@@ -271,7 +272,17 @@ browser.runtime.onMessage.addListener(
           } catch {
             // Tab may have closed
           }
-        });
+          });
+        } catch (error) {
+          const snapshot = await takeSnapshot();
+          const response: BgToBuffer = {
+            type: "APPLY_RESULT",
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+            snapshot,
+          };
+          try { await browser.tabs.sendMessage(sender.tab.id, response); } catch { /* buffer closed */ }
+        }
         break;
       }
 
