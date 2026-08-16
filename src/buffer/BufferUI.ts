@@ -85,7 +85,8 @@ function updateStatusBar(): void {
   const windowHeaders = text.split("\n").filter((l) => l.startsWith("Window "));
   let opsSummary = "";
   if (lastSnapshot) {
-    const parsed = parse(text, lastUrlMap);
+    const folderIds = new Map(lastFolders.map((folder) => [folder.name, folder.id]));
+    const parsed = parse(text, lastUrlMap, folderIds);
     const folderMap = new Map<number, number | null>();
     for (const [key, val] of Object.entries(lastTabFolderMap)) {
       folderMap.set(Number(key), val);
@@ -133,7 +134,8 @@ function hideStaleBanner(): void {
 function save(force: boolean): void {
   if (!lastSnapshot) return;
   const text = view.state.doc.toString();
-  const parsed = parse(text, lastUrlMap);
+  const folderIds = new Map(lastFolders.map((folder) => [folder.name, folder.id]));
+  const parsed = parse(text, lastUrlMap, folderIds);
   const savedUrls = new Set(lastSavedItems.map((item) => item.url));
   const ops = diff(lastSnapshot, parsed, undefined, savedUrls);
   const closeCount = ops.filter((op) => op.kind === "close").length;

@@ -6,14 +6,17 @@ const FOLDER_HEADER_RE = /^▸ Folder: (.+)$/;
 const SAVED_HEADER_RE = /^▸ Saved/;
 const RULE_LINE_RE = /─{3,}$/;
 const TAB_ID_RE = /^\[\s*\d+\]\s*/;
+const HIDDEN_TAB_ID_RE = /^\u2063(\d+)\u2063/;
 
 export function extractTabId(line: string): number | null {
+  const hidden = line.match(HIDDEN_TAB_ID_RE);
+  if (hidden) return parseInt(hidden[1], 10);
   const match = line.match(/^\[\s*(\d+)\]/);
   return match ? parseInt(match[1], 10) : null;
 }
 
 function stripTabId(line: string): string {
-  return line.replace(TAB_ID_RE, "");
+  return line.replace(HIDDEN_TAB_ID_RE, "").replace(TAB_ID_RE, "");
 }
 
 export function normalizeUrl(url: string): string {
@@ -38,7 +41,11 @@ export function extractTitle(line: string): string {
   return clean.slice(0, sepIndex).trim();
 }
 
-export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[] {
+export function parse(
+  text: string,
+  urlMap: Map<string, number[]>,
+  persistedFolders?: Map<string, number>,
+): ParsedLine[] {
   const result: ParsedLine[] = [];
   const textLines = text.split("\n");
   let currentWindowId = 0;
@@ -52,7 +59,8 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
     for (const id of ids) validTabIds.add(id);
   }
 
-  const folders = new Map<string, number>();
+  const folders = new Map<string, number>(persistedFolders ?? []);
+  let nextFolderId = Math.max(0, ...folders.values()) + 1;
 
   for (let i = 0; i < textLines.length; i++) {
     const line = textLines[i];
@@ -84,7 +92,7 @@ export function parse(text: string, urlMap: Map<string, number[]>): ParsedLine[]
     if (folderHeaderMatch) {
       const name = folderHeaderMatch[1].trim();
       if (!folders.has(name)) {
-        folders.set(name, folders.size + 1);
+        folders.set(name, nextFolderId++);
       }
       currentFolderId = folders.get(name)!;
       currentGroupId = null;

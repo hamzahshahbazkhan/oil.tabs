@@ -27,10 +27,11 @@ function lineText(line: RenderedLine, titleWidth: number): string {
     case "emptyState":
       return line.text ?? "";
     case "tabRow": {
+      const identity = line.tabId === undefined ? "" : `\u2063${line.tabId}\u2063`;
       const titlePart = line.title ?? line.url ?? "";
       const tagPart = line.discarded ? " [sleep]" : "";
       const pad = Math.max(0, titleWidth - titlePart.length - tagPart.length);
-      return `${titlePart}${tagPart}${" ".repeat(pad)} — ${line.url ?? ""}`;
+      return `${identity}${titlePart}${tagPart}${" ".repeat(pad)} — ${line.url ?? ""}`;
     }
   }
 }

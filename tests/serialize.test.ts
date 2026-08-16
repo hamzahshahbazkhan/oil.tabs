@@ -29,12 +29,12 @@ describe("formatSnapshot", () => {
     const { text } = formatSnapshot(fixture);
     const lines = text.split("\n");
     expect(lines[0]).toBe(`Window 1 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[1]).toBe("Example Domain — https://example.com/");
-    expect(lines[2]).toBe(`GitHub${" ".repeat(8)} — https://github.com/`);
+    expect(lines[1]).toBe(`\u20631\u2063Example Domain — https://example.com/`);
+    expect(lines[2]).toBe(`\u20632\u2063GitHub${" ".repeat(8)} — https://github.com/`);
     expect(lines[3]).toBe("");
     expect(lines[4]).toBe(`Window 2 │ 2 tabs ${"─".repeat(54)}`);
-    expect(lines[5]).toBe(`Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
-    expect(lines[6]).toBe(`Gmail${" ".repeat(9)} — https://mail.google.com/`);
+    expect(lines[5]).toBe(`\u20633\u2063Hacker News${" ".repeat(3)} — https://news.ycombinator.com/`);
+    expect(lines[6]).toBe(`\u20634\u2063Gmail${" ".repeat(9)} — https://mail.google.com/`);
     expect(lines).toHaveLength(7);
   });
 
@@ -106,6 +106,12 @@ describe("parse", () => {
     expect(liveLines).toHaveLength(4);
   });
 
+  it("uses persisted folder ids when folder headers are reordered", () => {
+    const folderText = "Window 1 │ 2 tabs ───────────────────────────────────────────────────────\n▸ Folder: Work\n\u20631\u2063One — https://one.com/\n▸ Folder: Personal\n\u20632\u2063Two — https://two.com/";
+    const parsed = parse(folderText, new Map(), new Map([["Work", 9], ["Personal", 4]]));
+    expect(parsed.map((line) => line.folderId)).toEqual([9, 4]);
+  });
+
   it("reordered lines preserve tabId via URL matching", () => {
     const { text, urlMap } = formatSnapshot(fixture);
     const lines = text.split("\n");
@@ -124,12 +130,11 @@ describe("parse", () => {
     expect(parsed).toHaveLength(0);
   });
 
-  it("URL change yields null tabId for the edited line", () => {
+  it("URL change preserves the embedded tab identity", () => {
     const { text, urlMap } = formatSnapshot(fixture);
     const modified = text.replace("https://example.com/", "https://changed.com/");
     const parsed = parse(modified, urlMap);
-    // Without an embedded tabId the edited line can't be matched
-    expect(parsed[0].tabId).toBeNull();
+    expect(parsed[0].tabId).toBe(1);
     expect(parsed[0].url).toBe("https://changed.com/");
     // Other tabs unaffected
     expect(parsed[1].tabId).toBe(2);
@@ -155,13 +160,13 @@ describe("parse", () => {
     expect(parsed[1].tabId).toBe(5);
   });
 
-  it("reordered duplicate URL lines are deterministic by position", () => {
+  it("reordered duplicate URL lines preserve their identities", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     [lines[ROW], lines[ROW + 1]] = [lines[ROW + 1], lines[ROW]];
     const parsed = parse(lines.join("\n"), urlMap);
-    expect(parsed[0].tabId).toBe(1);
-    expect(parsed[1].tabId).toBe(5);
+    expect(parsed[0].tabId).toBe(5);
+    expect(parsed[1].tabId).toBe(1);
   });
 
   it("reordered duplicate URL lines are deterministic", () => {
@@ -206,15 +211,15 @@ describe("parse", () => {
     expect(parsed[0].tabId).toBe(1);
   });
 
-  it("URL change on one duplicate tab yields null for it, other keeps its id", () => {
+  it("URL change on one duplicate tab preserves its id", () => {
     const { text, urlMap } = formatSnapshot(dupFixture);
     const lines = text.split("\n");
     lines[ROW] = lines[ROW].replace("https://example.com/", "https://changed.com/");
     const modified = lines.join("\n");
     const parsed = parse(modified, urlMap);
-    expect(parsed[0].tabId).toBeNull();
+    expect(parsed[0].tabId).toBe(1);
     expect(parsed[0].url).toBe("https://changed.com/");
-    expect(parsed[1].tabId).toBe(1);
+    expect(parsed[1].tabId).toBe(5);
     expect(parsed[1].url).toBe("https://example.com/");
   });
 });
@@ -224,6 +229,10 @@ describe("extractTabId", () => {
     expect(extractTabId("[42] title — url")).toBe(42);
     expect(extractTabId("[  42] title")).toBe(42);
     expect(extractTabId("[1] title")).toBe(1);
+  });
+
+  it("extracts invisible identity tokens", () => {
+    expect(extractTabId("\u206342\u2063title — url")).toBe(42);
   });
 
   it("returns null for lines without tabId prefix", () => {

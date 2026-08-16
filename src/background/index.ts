@@ -188,7 +188,9 @@ browser.runtime.onMessage.addListener(
           const snapshot = await takeSnapshot();
           const { urlMap } = formatSnapshot(snapshot);
 
-          const parsed = parse(message.text, urlMap);
+          const storedFolderData = await loadFolderData();
+          const folderIds = new Map(storedFolderData.folders.map((folder) => [folder.name, folder.id]));
+          const parsed = parse(message.text, urlMap, folderIds);
 
           if (currentUrlMap) {
             const existingIds = new Set(snapshot.lines.map(l => l.tabId));
