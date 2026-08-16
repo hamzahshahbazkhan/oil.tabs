@@ -1,7 +1,7 @@
 import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
 import { Vim } from "@replit/codemirror-vim";
-import { idMap, nonEditableLines } from "./BufferUI";
+import { idMap, nonEditableLines, lineKinds } from "./BufferUI";
 import { extractUrl, extractTitle, normalizeUrl } from "../model/Parser";
 
 // The package's declarations lag its runtime API (notably Ex callbacks and mapCommand).
@@ -67,6 +67,14 @@ export function setupVimCommands(
     }, 2500);
   };
 
+  const isSavedRow = (lineNo: number): boolean => {
+    for (let i = lineNo; i >= 1; i--) {
+      if (lineKinds.get(i) === "header") return false;
+      if (lineKinds.get(i) === "section") return view.state.doc.line(i).text.startsWith("▸ Saved");
+    }
+    return false;
+  };
+
   VimCompat.defineAction("yankUrl", (_cm: EditorView) => {
     const cursor = view.state.selection.main.head;
     const line = view.state.doc.lineAt(cursor);
@@ -106,6 +114,7 @@ export function setupVimCommands(
     }
     if (next > view.state.doc.lines) return;
     const nextLine = view.state.doc.line(next);
+    if (isSavedRow(line.number) !== isSavedRow(next)) return;
     view.dispatch({
       changes: [
         { from: line.from, to: line.to, insert: nextLine.text },
@@ -125,6 +134,7 @@ export function setupVimCommands(
     }
     if (prev < 1) return;
     const prevLine = view.state.doc.line(prev);
+    if (isSavedRow(line.number) !== isSavedRow(prev)) return;
     view.dispatch({
       changes: [
         { from: prevLine.from, to: prevLine.to, insert: line.text },
