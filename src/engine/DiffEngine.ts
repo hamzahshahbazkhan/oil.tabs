@@ -110,7 +110,7 @@ export function diff(
   for (const line of parsed) {
     const idx = tabIndexWithinWindow.get(line.windowId) ?? 0;
     if (line.tabId === null && !line.saved) {
-      createOps.push({ kind: "create", url: line.url, windowId: line.windowId, index: idx });
+      createOps.push({ kind: "create", url: line.url, windowId: line.windowId, index: idx, ...(line.folderId !== null ? { folderId: line.folderId } : {}) });
     }
     tabIndexWithinWindow.set(line.windowId, idx + 1);
   }

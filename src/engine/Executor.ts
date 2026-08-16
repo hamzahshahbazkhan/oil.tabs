@@ -104,11 +104,27 @@ async function execCreate(op: Operation & { kind: "create" }): Promise<JournalEn
     active: false,
   });
   const createdId = newTab.id;
+  let previousFolder: number | null = null;
+  if (createdId !== undefined && op.folderId !== undefined) {
+    const stored = await storageLocalGet("tabFolderMap");
+    const map: Record<number, number> = stored.tabFolderMap ?? {};
+    previousFolder = map[createdId] ?? null;
+    if (op.folderId === null) delete map[createdId];
+    else map[createdId] = op.folderId;
+    await storageLocalSet({ tabFolderMap: map });
+  }
   return {
     description: `create tab`,
     rollback: async () => {
       if (createdId !== undefined) {
         await removeTab(createdId);
+        if (op.folderId !== undefined) {
+          const stored = await storageLocalGet("tabFolderMap");
+          const map: Record<number, number> = stored.tabFolderMap ?? {};
+          if (previousFolder === null) delete map[createdId];
+          else map[createdId] = previousFolder;
+          await storageLocalSet({ tabFolderMap: map });
+        }
       }
     },
   };

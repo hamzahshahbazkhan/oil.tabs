@@ -8,7 +8,7 @@ import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
 import { LARGE_DIFF_THRESHOLD } from "../shared/constants";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
-import type { Operation, Snapshot } from "../shared/types";
+import type { Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
 import type { LineKind } from "../render/primitives";
 import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
@@ -84,36 +84,9 @@ function updateStatusBar(): void {
   const text = view.state.doc.toString();
   const tabLines = text.split("\n").filter((l) => l.includes(" — "));
   const windowHeaders = text.split("\n").filter((l) => l.startsWith("Window "));
-  let opsSummary = "";
-  if (lastSnapshot) {
-    const folderIds = new Map(lastFolders.map((folder) => [folder.name, folder.id]));
-    const parsed = parse(text, lastUrlMap, folderIds);
-    const folderMap = new Map<number, number | null>();
-    for (const [key, val] of Object.entries(lastTabFolderMap)) {
-      folderMap.set(Number(key), val);
-    }
-    const savedUrls = new Set(lastSavedItems.map((item) => item.url));
-    const ops = diff(lastSnapshot, parsed, folderMap, savedUrls);
-    const counts: Record<Operation["kind"], number> = { close: 0, move: 0, create: 0, navigate: 0, group: 0, assignFolder: 0, discard: 0, saveForLater: 0, deleteSaved: 0, bookmark: 0, restoreFromSaved: 0 };
-    for (const op of ops) {
-      counts[op.kind]++;
-    }
-    const parts: string[] = [];
-    if (counts.close) parts.push(`${counts.close} close`);
-    if (counts.create) parts.push(`${counts.create} create`);
-    if (counts.move) parts.push(`${counts.move} move`);
-    if (counts.navigate) parts.push(`${counts.navigate} nav`);
-    if (counts.group) parts.push(`${counts.group} group`);
-    if (counts.assignFolder) parts.push(`${counts.assignFolder} folder`);
-    if (counts.discard) parts.push(`${counts.discard} sleep`);
-    if (counts.saveForLater) parts.push(`${counts.saveForLater} save`);
-    if (counts.restoreFromSaved) parts.push(`${counts.restoreFromSaved} restore`);
-    if (counts.deleteSaved) parts.push(`${counts.deleteSaved} delete saved`);
-    opsSummary = parts.length ? ` │ ${parts.join(" · ")}` : "";
-  }
   const el = document.getElementById("statusbar");
   if (el) {
-    el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows${opsSummary} · b${__BUILD_HASH__}`;
+    el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows · b${__BUILD_HASH__}`;
   }
 }
 

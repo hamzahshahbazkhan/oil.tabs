@@ -19,6 +19,10 @@ let registered = false;
 
 const pendingDetach = new Map<number, BufferLine>();
 
+function cloneSnapshot(snapshot: Snapshot): Snapshot {
+  return { takenAt: snapshot.takenAt, lines: snapshot.lines.map((line) => ({ ...line })) };
+}
+
 function favIconUrl(tab: browser.Tabs.Tab): string | undefined {
   const url = tab.favIconUrl;
   return url && (url.startsWith("http") || (url.startsWith("data:") && url.length <= MAX_FAVICON_DATA_URL_LENGTH))
@@ -83,7 +87,7 @@ async function sendUpdate(): Promise<void> {
   try {
     const msg: BgToBuffer = {
       type: "SNAPSHOT_UPDATED",
-      snapshot: currentSnapshot,
+      snapshot: cloneSnapshot(currentSnapshot),
       folders: currentFolders,
       tabFolderMap: currentTabFolderMap,
       savedItems: currentSavedItems,
@@ -95,7 +99,7 @@ async function sendUpdate(): Promise<void> {
 }
 
 export async function init(snapshot: Snapshot): Promise<void> {
-  currentSnapshot = snapshot;
+  currentSnapshot = cloneSnapshot(snapshot);
   bufferTabId_ = await getBufferTabId();
   const { folders, tabFolderMap, savedForLater } = await storageLocalGet([
     "folders",
@@ -127,7 +131,7 @@ async function onBufferTabRemoved(tabId: number): Promise<void> {
 }
 
 export function getSnapshot(): Snapshot {
-  return currentSnapshot;
+  return cloneSnapshot(currentSnapshot);
 }
 
 export function replaceSnapshot(
@@ -136,7 +140,7 @@ export function replaceSnapshot(
   tabFolderMap?: Record<number, number>,
   savedItems?: SavedItem[],
 ): void {
-  currentSnapshot = snapshot;
+  currentSnapshot = cloneSnapshot(snapshot);
   if (folders !== undefined) currentFolders = folders;
   if (tabFolderMap !== undefined) currentTabFolderMap = tabFolderMap;
   if (savedItems !== undefined) currentSavedItems = savedItems;

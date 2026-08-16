@@ -14,7 +14,7 @@ export interface BufferLine {
 export type Operation =
   | { kind: "close"; tabId: number }
   | { kind: "move"; tabId: number; windowId: number; index: number }
-  | { kind: "create"; url: string; windowId: number; index: number }
+  | { kind: "create"; url: string; windowId: number; index: number; folderId?: number | null }
   | { kind: "navigate"; tabId: number; url: string }
   | { kind: "group"; tabId: number; groupId: number | "NEW" | "NONE" }
   | { kind: "assignFolder"; tabId: number; folderId: number | null }
