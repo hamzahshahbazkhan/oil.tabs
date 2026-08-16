@@ -170,6 +170,41 @@ export function setupVimCommands(
     return tabIds;
   };
 
+  VimCompat.defineEx("pin", "pin", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: true });
+  });
+  VimCompat.defineEx("unpin", "unp", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: false });
+  });
+  VimCompat.defineEx("mute", "mu", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "TOGGLE_MUTE_TABS", tabIds });
+  });
+  VimCompat.defineEx("duplicate", "dup", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "DUPLICATE_TABS", tabIds });
+  });
+  VimCompat.defineEx("only", "only", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_OTHER_TABS", tabIds });
+  });
+  VimCompat.defineEx("closeleft", "cl", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_SIDE_TABS", tabIds, side: "left" });
+  });
+  VimCompat.defineEx("closeright", "cr", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_SIDE_TABS", tabIds, side: "right" });
+  });
+  VimCompat.defineEx("new-window", "nw", (arg: string) => {
+    browser.runtime.sendMessage({ type: "CREATE_WINDOW", url: arg.trim() || undefined });
+  });
+  VimCompat.defineEx("undo-save", "us", () => {
+    browser.runtime.sendMessage({ type: "UNDO_SAVE" });
+  });
+
   VimCompat.defineEx("bookmark", "bm", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "BOOKMARK_TABS", tabIds });

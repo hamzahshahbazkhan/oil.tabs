@@ -11,6 +11,23 @@ interface JournalEntry {
   rollback: () => Promise<void>;
 }
 
+let lastJournal: JournalEntry[] | null = null;
+
+export async function undoLast(): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!lastJournal) return { ok: false, error: "There is no completed save to undo." };
+  const journal = lastJournal;
+  lastJournal = null;
+  const errors: string[] = [];
+  for (let i = journal.length - 1; i >= 0; i--) {
+    try {
+      await journal[i].rollback();
+    } catch (error) {
+      errors.push(`${journal[i].description}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return errors.length === 0 ? { ok: true } : { ok: false, error: `Undo incomplete: ${errors.join("; ")}` };
+}
+
 function tabIdOf(op: Operation): number | null {
   switch (op.kind) {
     case "create":
@@ -298,6 +315,7 @@ export async function execute(
   ops: Operation[],
   preSnapshot: Snapshot,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  lastJournal = null;
   const validationError = validateOps(ops, preSnapshot);
   if (validationError) return { ok: false, error: validationError };
 
@@ -349,5 +367,6 @@ export async function execute(
     }
   }
 
+  lastJournal = journal;
   return { ok: true };
 }

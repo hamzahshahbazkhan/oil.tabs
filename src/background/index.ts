@@ -1,10 +1,10 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow, discardTab } from "../adapter/BrowserAdapter";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
 import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
 import { plan } from "../engine/Planner";
-import { execute } from "../engine/Executor";
+import { execute, undoLast } from "../engine/Executor";
 import { init as initTabModel, getSnapshot, replaceSnapshot, refreshBufferTabId } from "../model/TabModel";
 import type { Snapshot } from "../shared/types";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
@@ -351,6 +351,78 @@ browser.runtime.onMessage.addListener(
         if (typeof message.url !== "string" || !message.url.trim()) return;
         await browser.tabs.create({ url: message.url });
         break;
+
+      case "SET_PINNED_TABS":
+        if (!isTabIdList(message.tabIds) || typeof message.pinned !== "boolean") return;
+        for (const tabId of message.tabIds) {
+          try { await browser.tabs.update(tabId, { pinned: message.pinned }); } catch { /* tab closed */ }
+        }
+        break;
+
+      case "DUPLICATE_TABS": {
+        if (!isTabIdList(message.tabIds)) return;
+        for (const tabId of message.tabIds) {
+          try {
+            const tab = await browser.tabs.get(tabId);
+            if (tab.windowId !== undefined) {
+              await browser.tabs.create({ windowId: tab.windowId, index: tab.index + 1, url: tab.url, active: false });
+            }
+          } catch { /* tab closed */ }
+        }
+        break;
+      }
+
+      case "CLOSE_OTHER_TABS": {
+        if (!isTabIdList(message.tabIds)) return;
+        const keep = new Set(message.tabIds);
+        const bufferTabId = await getBufferTabId();
+        const active = await browser.tabs.query({ active: true, currentWindow: true });
+        const windowId = active[0]?.windowId;
+        if (windowId === undefined) return;
+        const tabs = await browser.tabs.query({ windowId });
+        for (const tab of tabs) {
+          if (tab.id !== undefined && tab.id !== bufferTabId && !keep.has(tab.id)) {
+            try { await browser.tabs.remove(tab.id); } catch { /* tab closed */ }
+          }
+        }
+        break;
+      }
+
+      case "CLOSE_SIDE_TABS": {
+        if (!isTabIdList(message.tabIds) || (message.side !== "left" && message.side !== "right")) return;
+        const selected = new Set(message.tabIds);
+        const tabs = await browser.tabs.query({});
+        for (const tab of tabs) {
+          if (tab.id === undefined || tab.windowId === undefined || selected.has(tab.id)) continue;
+          const anchor = tabs.find((candidate) => candidate.id !== undefined && candidate.windowId === tab.windowId && selected.has(candidate.id));
+          if (!anchor || (message.side === "left" ? tab.index < anchor.index : tab.index > anchor.index)) continue;
+          try { await browser.tabs.remove(tab.id); } catch { /* tab closed */ }
+        }
+        break;
+      }
+
+      case "CREATE_WINDOW":
+        await createWindow({ url: message.url?.trim() || "about:blank", type: "normal", width: 1000, height: 800, left: 0, top: 0 });
+        break;
+
+      case "UNDO_SAVE": {
+        await withSaveLock(async () => {
+          const result = await undoLast();
+          const snapshot = await takeSnapshot();
+          replaceSnapshot(snapshot);
+          if (sender.tab?.id) {
+            try {
+              await browser.tabs.sendMessage(sender.tab.id, {
+                type: "APPLY_RESULT",
+                ok: result.ok,
+                error: "error" in result ? result.error : undefined,
+                snapshot,
+              } satisfies BgToBuffer);
+            } catch { /* buffer closed */ }
+          }
+        });
+        break;
+      }
 
       case "CYCLE_NEXT":
         await cycleTab("next");
