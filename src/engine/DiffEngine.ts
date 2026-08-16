@@ -212,7 +212,7 @@ export function diff(
       const old = oldById.get(line.tabId);
       saveRestoreOps.push({ kind: "saveForLater", tabId: line.tabId, url: line.url, title: old?.title ?? "" });
     } else {
-      saveRestoreOps.push({ kind: "saveForLater", tabId: 0, url: line.url, title: "" });
+      saveRestoreOps.push({ kind: "saveForLater", tabId: null, url: line.url, title: "" });
     }
   }
   if (savedUrls) {

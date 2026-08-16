@@ -12,9 +12,14 @@ interface JournalEntry {
 }
 
 function tabIdOf(op: Operation): number | null {
-  if (op.kind === "create") return null;
-  if (op.kind === "restoreFromSaved") return null;
-  return (op as any).tabId ?? null;
+  switch (op.kind) {
+    case "create":
+    case "restoreFromSaved":
+    case "saveForLater":
+      return null;
+    default:
+      return op.tabId;
+  }
 }
 
 function validateOps(ops: Operation[], snapshot: Snapshot): string | null {
@@ -171,11 +176,13 @@ async function execDiscard(op: Operation & { kind: "discard" }): Promise<Journal
 async function execSaveForLater(op: Operation & { kind: "saveForLater" }): Promise<JournalEntry> {
   const { savedForLater } = await storageLocalGet("savedForLater");
   const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
-  list.push({ url: op.url, title: op.title, savedAt: Date.now() });
+  const alreadySaved = list.some((item) => item.url === op.url && item.title === op.title);
+  const addedAt = alreadySaved ? null : Date.now();
+  if (addedAt !== null) list.push({ url: op.url, title: op.title, savedAt: addedAt });
   await storageLocalSet({ savedForLater: list });
 
   let beforeTab: { url: string; windowId: number; index: number } | null = null;
-  if (op.tabId > 0) {
+  if (op.tabId !== null) {
     try {
       const t = await getTab(op.tabId);
       beforeTab = { url: t.url ?? "", windowId: t.windowId, index: t.index };
@@ -190,7 +197,8 @@ async function execSaveForLater(op: Operation & { kind: "saveForLater" }): Promi
     rollback: async () => {
       const { savedForLater } = await storageLocalGet("savedForLater");
       const updated = (savedForLater ?? []).filter(
-        (item: any) => !(item.url === op.url && item.title === op.title),
+        (item: { url: string; title: string; savedAt: number }) =>
+          addedAt === null || item.savedAt !== addedAt,
       );
       await storageLocalSet({ savedForLater: updated });
 
@@ -217,25 +225,19 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
     // Tab may already be gone
   }
 
-  let bookmarkId: string | undefined;
-  try {
-    const bmNode = await createBookmark({ title: op.title, url: op.url });
-    bookmarkId = bmNode.id;
-  } catch {
-    // Bookmark creation failed but we still need to handle the tab
-  }
+  let bookmarkId: string;
+  const bmNode = await createBookmark({ title: op.title, url: op.url });
+  bookmarkId = bmNode.id;
 
   await removeTab(op.tabId);
 
   return {
     description: `bookmark tab ${op.tabId}`,
     rollback: async () => {
-      if (bookmarkId !== undefined) {
-        try {
-          await removeBookmark(bookmarkId);
-        } catch {
-          console.warn(`Could not remove bookmark ${bookmarkId}`);
-        }
+      try {
+        await removeBookmark(bookmarkId);
+      } catch {
+        console.warn(`Could not remove bookmark ${bookmarkId}`);
       }
       if (beforeTab) {
         await createTab({
@@ -259,7 +261,7 @@ async function execRestoreFromSaved(op: Operation & { kind: "restoreFromSaved" }
 
   const { savedForLater } = await storageLocalGet("savedForLater");
   const list: { url: string; title: string; savedAt: number }[] = savedForLater ?? [];
-  const idx = list.findIndex((item) => item.url === op.url);
+  const idx = list.findIndex((item) => item.url === op.url && (op.title === "" || item.title === op.title));
   const removed = idx !== -1 ? list.splice(idx, 1)[0] : null;
   await storageLocalSet({ savedForLater: list });
 

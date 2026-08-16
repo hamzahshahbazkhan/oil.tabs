@@ -257,13 +257,13 @@ describe("diff", () => {
     expect(closeOps).toHaveLength(0);
   });
 
-  it("line in saved section without tabId produces saveForLater op with tabId 0", () => {
+  it("line in saved section without tabId produces saveForLater op without a tab id", () => {
     const old = makeSnapshot([]);
     const parsed = makeParsed([{ tabId: null, windowId: 0, url: "https://saved.com/", saved: true }]);
     const ops = diff(old, parsed);
     const saveOps = ops.filter((op) => op.kind === "saveForLater");
     expect(saveOps).toHaveLength(1);
-    expect(saveOps[0]).toEqual({ kind: "saveForLater", tabId: 0, url: "https://saved.com/", title: "" });
+    expect(saveOps[0]).toEqual({ kind: "saveForLater", tabId: null, url: "https://saved.com/", title: "" });
   });
 
   it("live line with null tabId matching saved URL produces restoreFromSaved op", () => {
