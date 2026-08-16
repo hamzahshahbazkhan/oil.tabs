@@ -1,36 +1,33 @@
 import type { BufferLine, Operation, ParsedLine, Snapshot } from "../shared/types";
 
 function computeLCS(a: number[], b: number[]): number[] {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0 || n === 0) return [];
+  if (a.length === 0 || b.length === 0) return [];
+  const position = new Map<number, number>();
+  b.forEach((id, index) => position.set(id, index));
+  const values = a
+    .map((id) => position.get(id))
+    .filter((index): index is number => index !== undefined);
+  if (values.length === 0) return [];
 
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
+  const tails: number[] = [];
+  const predecessors = new Array<number>(values.length).fill(-1);
+  for (let i = 0; i < values.length; i++) {
+    let lo = 0;
+    let hi = tails.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (values[tails[mid]] < values[i]) lo = mid + 1;
+      else hi = mid;
     }
+    if (lo > 0) predecessors[i] = tails[lo - 1];
+    tails[lo] = i;
   }
 
   const result: number[] = [];
-  let i = m, j = n;
-  while (i > 0 && j > 0) {
-    if (a[i - 1] === b[j - 1]) {
-      result.unshift(a[i - 1]);
-      i--;
-      j--;
-    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
-      i--;
-    } else {
-      j--;
-    }
+  for (let index = tails[tails.length - 1]; index !== -1; index = predecessors[index]) {
+    result.push(a[index]);
   }
-  return result;
+  return result.reverse();
 }
 
 export function validateMoveOps(moveOps: Operation[], snapshot: Snapshot): Operation[] {
