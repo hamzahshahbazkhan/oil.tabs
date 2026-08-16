@@ -7,7 +7,7 @@ import { plan } from "../engine/Planner";
 import { execute, undoLast } from "../engine/Executor";
 import { init as initTabModel, getSnapshot, replaceSnapshot, refreshBufferTabId } from "../model/TabModel";
 import type { Snapshot } from "../shared/types";
-import type { BgToBuffer, FolderInfo } from "../shared/messages";
+import type { BgToBuffer, BufferToBg, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
 
 let syncInited = false;
@@ -47,6 +47,39 @@ function isTabId(value: unknown): value is number {
 
 function isTabIdList(value: unknown): value is number[] {
   return Array.isArray(value) && value.every(isTabId);
+}
+
+function isBufferMessage(value: unknown): value is BufferToBg {
+  if (!value || typeof value !== "object" || !("type" in value) || typeof value.type !== "string") return false;
+  const message = value as Record<string, unknown>;
+  switch (message.type) {
+    case "REQUEST_SNAPSHOT":
+    case "CYCLE_NEXT":
+    case "CYCLE_PREV":
+    case "UNDO_SAVE":
+      return true;
+    case "SAVE":
+      return typeof message.text === "string";
+    case "FOCUS_TAB":
+      return isTabId(message.tabId);
+    case "DISCARD_TABS":
+    case "RELOAD_TABS":
+    case "TOGGLE_MUTE_TABS":
+    case "BOOKMARK_TABS":
+    case "DUPLICATE_TABS":
+    case "CLOSE_OTHER_TABS":
+      return isTabIdList(message.tabIds);
+    case "SET_PINNED_TABS":
+      return isTabIdList(message.tabIds) && typeof message.pinned === "boolean";
+    case "CLOSE_SIDE_TABS":
+      return isTabIdList(message.tabIds) && (message.side === "left" || message.side === "right");
+    case "OPEN_TAB":
+      return typeof message.url === "string" && message.url.trim().length > 0;
+    case "CREATE_WINDOW":
+      return message.url === undefined || typeof message.url === "string";
+    default:
+      return false;
+  }
 }
 
 async function updateMRU(tabId: number): Promise<void> {
@@ -156,7 +189,8 @@ browser.commands.onCommand.addListener(async (command) => {
 });
 
 browser.runtime.onMessage.addListener(
-  async (message: any, sender: browser.Runtime.MessageSender) => {
+  async (message: unknown, sender: browser.Runtime.MessageSender) => {
+    if (!isBufferMessage(message)) return;
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
         const senderTabId = sender.tab?.id;
