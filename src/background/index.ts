@@ -465,7 +465,9 @@ browser.runtime.onMessage.addListener(
         await withSaveLock(async () => {
           const result = await undoLast();
           const snapshot = await takeSnapshot();
-          replaceSnapshot(snapshot);
+          const folderData = await loadFolderData();
+          const savedItems = await loadSavedItems();
+          replaceSnapshot(snapshot, folderData.folders, folderData.tabFolderMap, savedItems);
           if (sender.tab?.id) {
             try {
               await browser.tabs.sendMessage(sender.tab.id, {
@@ -473,6 +475,9 @@ browser.runtime.onMessage.addListener(
                 ok: result.ok,
                 error: "error" in result ? result.error : undefined,
                 snapshot,
+                folders: folderData.folders,
+                tabFolderMap: folderData.tabFolderMap,
+                savedItems,
               } satisfies BgToBuffer);
             } catch { /* buffer closed */ }
           }

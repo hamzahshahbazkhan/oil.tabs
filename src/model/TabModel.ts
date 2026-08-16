@@ -197,7 +197,14 @@ async function onTabUpdated(
   if (idx === -1) return;
 
   const line = currentSnapshot.lines[idx];
-  if (changeInfo.url !== undefined) line.url = tab.url ?? line.url;
+  if (changeInfo.url !== undefined) {
+    line.url = tab.url ?? line.url;
+    line.editable = !(
+      line.url.startsWith("about:") ||
+      line.url.startsWith("chrome:") ||
+      line.url === ""
+    );
+  }
   if (changeInfo.title !== undefined) line.title = tab.title ?? line.title;
   if (changeInfo.discarded !== undefined)
     line.discarded = tab.discarded ?? line.discarded;
@@ -205,7 +212,7 @@ async function onTabUpdated(
   if (changeInfo.groupId !== undefined) {
     line.groupId = changeInfo.groupId > -1 ? changeInfo.groupId : null;
   }
-  if (changeInfo.favIconUrl !== undefined) line.favIconUrl = tab.favIconUrl;
+  if (changeInfo.favIconUrl !== undefined) line.favIconUrl = favIconUrl(tab);
 
   scheduleNotify();
 }
