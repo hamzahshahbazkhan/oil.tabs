@@ -81,6 +81,12 @@ function updateStatusBar(): void {
   const text = view.state.doc.toString();
   const tabLines = text.split("\n").filter((l) => l.includes(" — "));
   const windowHeaders = text.split("\n").filter((l) => l.startsWith("Window "));
+  const vimState = getCM(view)?.state?.vim;
+  const mode = vimState?.visualMode ? "VISUAL" : vimState?.insertMode ? "INSERT" : "NORMAL";
+  const modeEl = document.getElementById("mode");
+  if (modeEl) modeEl.textContent = mode;
+  const promptEl = document.getElementById("promptText");
+  if (promptEl) promptEl.textContent = mode === "INSERT" ? "type to edit · Esc for normal mode" : "tabs · arrange, focus, and edit";
   const el = document.getElementById("statusbar");
   if (el) {
     el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows · b${__BUILD_HASH__}`;
@@ -283,8 +289,8 @@ export function setupBufferUI(): void {
           remapLocalLineState(update.startState.doc.toString(), update.state.doc.toString());
           dirty = true;
         }
-        scheduleStatusUpdate();
       }
+      if (update.docChanged || update.selectionSet) scheduleStatusUpdate();
     });
 
     view = new EditorView({

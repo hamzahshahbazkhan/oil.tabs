@@ -10,56 +10,139 @@
       *::after {
         box-sizing: border-box;
       }
+      :root {
+        color-scheme: dark;
+        --bg: #080a12;
+        --panel: rgba(17, 21, 35, 0.96);
+        --panel-raised: #151a2b;
+        --border: rgba(126, 145, 196, 0.18);
+        --muted: #697398;
+        --text: #d8def8;
+        --accent: #8aadf4;
+        --pink: #f5bde6;
+        --green: #a6da95;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(138, 173, 244, 0.04);
+      }
       body {
         margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% -20%, rgba(138, 173, 244, 0.16), transparent 42%),
+          radial-gradient(circle at 100% 100%, rgba(245, 189, 230, 0.08), transparent 32%),
+          var(--bg);
+        color: var(--text);
+        font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+      }
+      #appShell {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        background: #000000;
-        color: #c0caf5;
-        font-family: "JetBrains Mono", "Fira Code", monospace;
+        width: min(1120px, calc(100vw - 32px));
+        height: min(860px, calc(100vh - 32px));
+        min-height: 280px;
+        margin: 16px auto;
+        overflow: hidden;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
       }
+      #topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 48px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,.035), transparent);
+        user-select: none;
+      }
+      #brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .02em;
+      }
+      #brandMark {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        color: #0b0d15;
+        background: linear-gradient(135deg, var(--accent), var(--pink));
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+      #mode {
+        margin-left: auto;
+        padding: 4px 8px;
+        color: var(--accent);
+        background: rgba(138, 173, 244, .1);
+        border: 1px solid rgba(138, 173, 244, .2);
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .12em;
+      }
+      #topHint { color: var(--muted); font-size: 11px; }
+      #promptbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 0 18px;
+        color: var(--muted);
+        border-bottom: 1px solid rgba(126, 145, 196, .1);
+        font-size: 12px;
+      }
+      #promptGlyph { color: var(--pink); font-size: 17px; }
+      #promptText { color: #9aa6cf; }
+      #editor {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #editor .cm-editor { height: 100%; }
       #staleBanner {
         flex: 0 0 auto;
         display: none;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 14px;
-        font-size: 12px;
-        background: #2d2416;
-        color: #e0af68;
-        border-bottom: 1px solid #3d2e16;
-        white-space: pre;
+        min-height: 30px;
+        padding: 7px 16px;
+        color: #f5d08a;
+        background: rgba(210, 161, 87, .12);
+        border-bottom: 1px solid rgba(210, 161, 87, .22);
+        font-size: 11px;
       }
-      #editor {
-        flex: 1;
-        overflow: hidden;
-      }
-      #editor .cm-editor {
-        height: 100%;
+      #footer {
+        display: flex;
+        align-items: center;
+        min-height: 34px;
+        border-top: 1px solid var(--border);
       }
       #statusbar {
-        flex: 0 0 auto;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 14px;
+        flex: 1;
+        padding: 0 16px;
         font-size: 12px;
-        background: #0a0b14;
-        color: #565f89;
-        border-top: 1px solid #1a1c2e;
+        color: var(--muted);
         white-space: pre;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      #footerHints { padding: 0 16px; color: #4e5778; font-size: 10px; }
       #closeBtn {
         position: fixed;
-        top: 4px;
-        right: 8px;
+        top: 12px;
+        right: 14px;
         width: 24px;
         height: 24px;
         border: none;
         background: transparent;
-        color: #565f89;
+        color: var(--muted);
         font-size: 16px;
         cursor: pointer;
         display: flex;
@@ -69,16 +152,33 @@
         z-index: 100;
       }
       #closeBtn:hover {
-        background: #1a1c2e;
-        color: #c0caf5;
+        background: rgba(138, 173, 244, .12);
+        color: var(--text);
+      }
+      @media (max-width: 700px) {
+        #appShell { width: 100vw; height: 100vh; margin: 0; border: 0; border-radius: 0; }
+        #topHint, #footerHints { display: none; }
+      }
+      @media (max-height: 520px) {
+        #appShell { height: 100vh; margin-block: 0; }
+        #topbar { min-height: 40px; }
+        #promptbar { min-height: 34px; }
       }
     </style>
   </head>
   <body>
-    <div id="staleBanner">Buffer may be out of date — press gr to refresh</div>
-    <button id="closeBtn">&times;</button>
-    <div id="editor"></div>
-    <div id="statusbar">loading...</div>
+    <main id="appShell">
+      <header id="topbar">
+        <div id="brand"><span id="brandMark">◈</span><span>tab-oil</span></div>
+        <span id="topHint">tab workspace</span>
+        <span id="mode">NORMAL</span>
+      </header>
+      <div id="promptbar"><span id="promptGlyph">❯</span><span id="promptText">tabs · arrange, focus, and edit</span></div>
+      <div id="staleBanner">⚠ browser state changed — press <strong>gr</strong> to refresh</div>
+      <div id="editor"></div>
+      <footer id="footer"><div id="statusbar">Loading workspace…</div><div id="footerHints">Enter focus · :w save · gr refresh · ? help</div></footer>
+    </main>
+    <button id="closeBtn" aria-label="Close buffer">&times;</button>
     <script type="module" src="buffer.js"></script>
   </body>
 </html>
