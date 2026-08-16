@@ -16,22 +16,14 @@ function pushTabRows(
   tabFolderMap?: Record<number, number>,
 ): void {
   let currentFolder: number | string = "__unset";
-  let currentGroup: number | string = "__unset";
   for (const tab of tabs.slice().sort((a, b) => a.index - b.index)) {
     const folderKey = tabFolderMap && tab.tabId !== null ? tabFolderMap[tab.tabId] ?? "__nofolder" : "__nofolder";
     if (folderKey !== currentFolder) {
       currentFolder = folderKey;
-      currentGroup = "__unset";
       if (folderKey !== "__nofolder") {
         const folderName = folderById.get(folderKey as number) ?? `Folder ${folderKey}`;
         lines.push(Section(`Folder: ${folderName}`));
       }
-    }
-
-    const groupKey = tab.groupId ?? "__ungrouped";
-    if (groupKey !== currentGroup) {
-      currentGroup = groupKey;
-      if (groupKey !== "__ungrouped") lines.push(Section(`Group: ${groupKey}`));
     }
 
     lines.push(TabRow({

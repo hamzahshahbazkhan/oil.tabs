@@ -167,7 +167,9 @@ export function setupVimCommands(
   VimCompat.mapCommand("J", "action", "moveLineDown");
   VimCompat.mapCommand("K", "action", "moveLineUp");
 
-  const closeBuffer = () => window.close();
+  const closeBuffer = () => {
+    void browser.runtime.sendMessage({ type: "CLOSE_BUFFER" });
+  };
 
   VimCompat.defineAction("closeBuffer", closeBuffer);
   VimCompat.mapCommand("-", "action", "closeBuffer", { context: "normal" });
@@ -207,10 +209,6 @@ export function setupVimCommands(
   defineEx("unpin", "unp", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: false });
-  });
-  defineEx("ungroup", "ug", () => {
-    const tabIds = selectedTabIds();
-    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "UNGROUP_TABS", tabIds });
   });
   defineEx("mute", "mu", () => {
     const tabIds = selectedTabIds();

@@ -194,6 +194,13 @@ describe("diff", () => {
     expect(groupOps[0]).toEqual({ kind: "group", tabId: 1, groupId: 5 });
   });
 
+  it("preserves browser groups when group reconciliation is disabled", () => {
+    const old = makeSnapshot([{ tabId: 1, windowId: 1, index: 0 }]);
+    const grouped = { ...old, lines: old.lines.map((line) => ({ ...line, groupId: 5 })) };
+    const parsed = makeParsed([{ tabId: 1, windowId: 1, groupId: null }]);
+    expect(diff(grouped, parsed, undefined, undefined, false).some((op) => op.kind === "group")).toBe(false);
+  });
+
   it("invalid pinned/unpinned interleave is reported by validateMoveOps", () => {
     const old = makeSnapshot([
       { tabId: 1, windowId: 1, index: 0, pinned: true },

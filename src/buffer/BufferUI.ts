@@ -164,7 +164,7 @@ function save(force: boolean): void {
   const savedUrls = new Set(lastSavedItems.map((item) => item.url));
   let ops;
   try {
-    ops = diff(lastSnapshot, parsed, undefined, savedUrls);
+    ops = diff(lastSnapshot, parsed, undefined, savedUrls, false);
   } catch (error) {
     showToast(`Could not save: ${error instanceof Error ? error.message : String(error)}`);
     return;

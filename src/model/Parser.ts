@@ -1,7 +1,6 @@
 import type { ParsedLine } from "../shared/types";
 
 const WINDOW_HEADER_RE = /^Window (\d+) │ (\d+) tabs? ─+$/;
-const GROUP_HEADER_RE = /^▸ Group: (\d+)$/;
 const FOLDER_HEADER_RE = /^▸ Folder: (.+)$/;
 const SAVED_HEADER_RE = /^▸ Saved/;
 const RULE_LINE_RE = /─{3,}$/;
@@ -60,7 +59,6 @@ export function parse(
   const result: ParsedLine[] = [];
   const textLines = text.split("\n");
   let currentWindowId = 0;
-  let currentGroupId: number | null = null;
   let currentFolderId: number | null = null;
   let inSavedSection = false;
   const usedTabIds = new Set<number>();
@@ -79,7 +77,6 @@ export function parse(
     if (line.match(SAVED_HEADER_RE)) {
       inSavedSection = true;
       currentWindowId = 0;
-      currentGroupId = null;
       currentFolderId = null;
       continue;
     }
@@ -87,15 +84,8 @@ export function parse(
     const headerMatch = line.match(WINDOW_HEADER_RE);
     if (headerMatch) {
       currentWindowId = parseInt(headerMatch[1], 10);
-      currentGroupId = null;
       currentFolderId = null;
       inSavedSection = false;
-      continue;
-    }
-
-    const groupHeaderMatch = line.match(GROUP_HEADER_RE);
-    if (groupHeaderMatch) {
-      currentGroupId = Number(groupHeaderMatch[1]);
       continue;
     }
 
@@ -106,7 +96,6 @@ export function parse(
         folders.set(name, nextFolderId++);
       }
       currentFolderId = folders.get(name)!;
-      currentGroupId = null;
       continue;
     }
 
@@ -130,7 +119,7 @@ export function parse(
 
     if (tabId !== null) usedTabIds.add(tabId);
 
-    result.push({ tabId, windowId: currentWindowId, url, groupId: currentGroupId, folderId: currentFolderId, saved: inSavedSection });
+    result.push({ tabId, windowId: currentWindowId, url, groupId: null, folderId: currentFolderId, saved: inSavedSection });
   }
 
   return result;

@@ -14,6 +14,7 @@ export type BgToBuffer =
 
 export type BufferToBg =
   | { type: "REQUEST_SNAPSHOT" }
+  | { type: "CLOSE_BUFFER" }
   | { type: "SAVE"; text: string }
   | { type: "FOCUS_TAB"; tabId: number }
   | { type: "DISCARD_TABS"; tabIds: number[] }
@@ -22,7 +23,6 @@ export type BufferToBg =
   | { type: "BOOKMARK_TABS"; tabIds: number[] }
   | { type: "OPEN_TAB"; url: string }
   | { type: "SET_PINNED_TABS"; tabIds: number[]; pinned: boolean }
-  | { type: "UNGROUP_TABS"; tabIds: number[] }
   | { type: "DUPLICATE_TABS"; tabIds: number[] }
   | { type: "CLOSE_OTHER_TABS"; tabIds: number[] }
   | { type: "CLOSE_SIDE_TABS"; tabIds: number[]; side: "left" | "right" }

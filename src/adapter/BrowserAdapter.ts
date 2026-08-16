@@ -148,25 +148,12 @@ export async function openOrFocusBufferTab(): Promise<void> {
     BUFFER_WINDOW_ID_KEY,
   ]);
   const existingTabId = stored[BUFFER_TAB_ID_KEY] as number | undefined;
-  const existingWindowId = stored[BUFFER_WINDOW_ID_KEY] as number | undefined;
-
-  if (existingWindowId !== undefined) {
-    try {
-      const win = await getWindow(existingWindowId);
-      const tabs = await queryTabs({ windowId: existingWindowId });
-      if (win && tabs.some((tab) => tab.id === existingTabId)) {
-        await updateWindow(win.id!, { focused: true });
-        return;
-      }
-      await storageSessionRemove([BUFFER_TAB_ID_KEY, BUFFER_WINDOW_ID_KEY]);
-    } catch {
-      await storageSessionRemove([BUFFER_TAB_ID_KEY, BUFFER_WINDOW_ID_KEY]);
-    }
-  } else if (existingTabId !== undefined) {
+  if (existingTabId !== undefined) {
     try {
       const tab = await getTab(existingTabId);
       if (tab && tab.windowId !== undefined) {
         await updateWindow(tab.windowId, { focused: true });
+        await browser.tabs.update(existingTabId, { active: true });
         return;
       }
     } catch {
@@ -174,35 +161,24 @@ export async function openOrFocusBufferTab(): Promise<void> {
     }
   }
 
-  let left = 0;
-  let top = 0;
-  let width = 1200;
-  let height = 800;
+  let windowId: number | undefined;
   try {
     const win = await getLastFocusedWindow();
-    if (win && win.type === "normal" && win.width && win.height) {
-      width = Math.round(win.width * 0.88);
-      height = Math.round(win.height * 0.85);
-      left = win.left! + Math.round((win.width - width) / 2);
-      top = win.top! + Math.round((win.height - height) / 2);
-    }
+    if (win?.type === "normal") windowId = win.id;
   } catch {
-    // Use defaults
+    // The browser chooses the active window if its focused window is unavailable.
   }
 
-  const popup = await createWindow({
+  const bufferTab = await browser.tabs.create({
     url: browser.runtime.getURL("buffer.html"),
-    type: "popup",
-    width,
-    height,
-    left,
-    top,
+    active: true,
+    ...(windowId === undefined ? {} : { windowId }),
   });
 
-  if (popup.tabs && popup.tabs[0] && popup.tabs[0].id !== undefined) {
+  if (bufferTab.id !== undefined) {
     await storageSessionSet({
-      [BUFFER_TAB_ID_KEY]: popup.tabs[0].id,
-      [BUFFER_WINDOW_ID_KEY]: popup.id,
+      [BUFFER_TAB_ID_KEY]: bufferTab.id,
+      [BUFFER_WINDOW_ID_KEY]: bufferTab.windowId,
     });
   }
 }

@@ -70,6 +70,19 @@ describe("formatSnapshot", () => {
     expect(text).not.toContain("▸ Tabs");
     expect(text.indexOf("Pin")).toBeLessThan(text.indexOf("Reg"));
   });
+
+  it("keeps browser tab groups out of the editable buffer", () => {
+    const grouped: Snapshot = {
+      takenAt: 0,
+      lines: [
+        { tabId: 1, windowId: 1, index: 0, url: "https://one.example/", title: "One", pinned: false, discarded: false, editable: true, groupId: 42 },
+        { tabId: 2, windowId: 1, index: 1, url: "https://two.example/", title: "Two", pinned: false, discarded: false, editable: true, groupId: 42 },
+      ],
+    };
+    const { text } = formatSnapshot(grouped);
+    expect(text).not.toContain("Group:");
+    expect(text.indexOf("One")).toBeLessThan(text.indexOf("Two"));
+  });
 });
 
 describe("parse", () => {

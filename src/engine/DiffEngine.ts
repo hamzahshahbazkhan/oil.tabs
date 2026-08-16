@@ -80,6 +80,7 @@ export function diff(
   parsed: ParsedLine[],
   folderMap?: Map<number, number | null>,
   savedUrls?: Set<string>,
+  reconcileGroups = true,
 ): Operation[] {
   const oldById = new Map<number, BufferLine>();
   const oldWindowOf = new Map<number, number>();
@@ -127,7 +128,7 @@ export function diff(
     if (old.url !== line.url) {
       navigateOps.push({ kind: "navigate", tabId: line.tabId, url: line.url });
     }
-    if (old.groupId !== line.groupId) {
+    if (reconcileGroups && old.groupId !== line.groupId) {
       groupOps.push({ kind: "group", tabId: line.tabId, groupId: line.groupId ?? "NONE" });
     }
     if (folderMap) {
