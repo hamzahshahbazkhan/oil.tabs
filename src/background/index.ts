@@ -38,6 +38,24 @@ async function loadSavedItems(): Promise<SavedItem[]> {
   return (savedForLater ?? []) as SavedItem[];
 }
 
+async function syncBufferSnapshot(bufferTabId: number): Promise<void> {
+  const snapshot = await takeSnapshot();
+  const folderData = await loadFolderData();
+  const savedItems = await loadSavedItems();
+  replaceSnapshot(snapshot, folderData.folders, folderData.tabFolderMap, savedItems);
+  try {
+    await browser.tabs.sendMessage(bufferTabId, {
+      type: "SNAPSHOT_UPDATED",
+      snapshot,
+      folders: folderData.folders,
+      tabFolderMap: folderData.tabFolderMap,
+      savedItems,
+    } satisfies BgToBuffer);
+  } catch {
+    // The buffer may have been closed during the browser operation.
+  }
+}
+
 const MRU_MAX = 50;
 const ACTIVE_BUFFER_KEY = "activeBufferTabId";
 
@@ -191,7 +209,8 @@ browser.commands.onCommand.addListener(async (command) => {
 browser.runtime.onMessage.addListener(
   async (message: unknown, sender: browser.Runtime.MessageSender) => {
     if (!isBufferMessage(message)) return;
-    switch (message.type) {
+    try {
+      switch (message.type) {
       case "REQUEST_SNAPSHOT": {
         const senderTabId = sender.tab?.id;
         if (senderTabId === undefined) return;
@@ -321,6 +340,7 @@ browser.runtime.onMessage.addListener(
             // Tab may already be discarded or closed
           }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
@@ -333,6 +353,7 @@ browser.runtime.onMessage.addListener(
             // Tab may have been closed
           }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
@@ -346,6 +367,7 @@ browser.runtime.onMessage.addListener(
             // Tab may have been closed
           }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
@@ -371,12 +393,14 @@ browser.runtime.onMessage.addListener(
             // Buffer may have closed while the operation was running.
           }
         });
+        await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
       case "OPEN_TAB":
         if (typeof message.url !== "string" || !message.url.trim()) return;
         await browser.tabs.create({ url: message.url });
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
 
       case "SET_PINNED_TABS":
@@ -384,6 +408,7 @@ browser.runtime.onMessage.addListener(
         for (const tabId of message.tabIds) {
           try { await browser.tabs.update(tabId, { pinned: message.pinned }); } catch { /* tab closed */ }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
 
       case "DUPLICATE_TABS": {
@@ -396,6 +421,7 @@ browser.runtime.onMessage.addListener(
             }
           } catch { /* tab closed */ }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
@@ -412,6 +438,7 @@ browser.runtime.onMessage.addListener(
             try { await browser.tabs.remove(tab.id); } catch { /* tab closed */ }
           }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
@@ -425,11 +452,13 @@ browser.runtime.onMessage.addListener(
           if (!anchor || (message.side === "left" ? tab.index < anchor.index : tab.index > anchor.index)) continue;
           try { await browser.tabs.remove(tab.id); } catch { /* tab closed */ }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
       }
 
       case "CREATE_WINDOW":
         await createWindow({ url: message.url?.trim() || "about:blank", type: "normal", width: 1000, height: 800, left: 0, top: 0 });
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
 
       case "UNDO_SAVE": {
@@ -458,6 +487,20 @@ browser.runtime.onMessage.addListener(
       case "CYCLE_PREV":
         await cycleTab("prev");
         break;
+      }
+    } catch (error) {
+      if (sender.tab?.id) {
+        try {
+          await browser.tabs.sendMessage(sender.tab.id, {
+            type: "APPLY_RESULT",
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+            snapshot: await takeSnapshot(),
+          } satisfies BgToBuffer);
+        } catch {
+          // The buffer may have closed while reporting the error.
+        }
+      }
     }
   },
 );

@@ -235,7 +235,7 @@ export function setupVimCommands(
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_SIDE_TABS", tabIds, side: "right" });
   });
   defineEx("new-window", "nw", (arg: string) => {
-    browser.runtime.sendMessage({ type: "CREATE_WINDOW", url: arg.trim() || undefined });
+    browser.runtime.sendMessage({ type: "CREATE_WINDOW", url: arg?.trim() || undefined });
   });
   defineEx("undo-save", "us", () => {
     browser.runtime.sendMessage({ type: "UNDO_SAVE" });
@@ -247,7 +247,7 @@ export function setupVimCommands(
   });
 
   defineEx("open", "e", (arg: string) => {
-    const url = normalizeUrl(arg.trim());
+    const url = normalizeUrl(arg?.trim() ?? "");
     if (url) browser.runtime.sendMessage({ type: "OPEN_TAB", url });
   });
 

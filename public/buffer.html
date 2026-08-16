@@ -68,18 +68,6 @@
         letter-spacing: .12em;
       }
       #topHint { color: var(--muted); font-size: 11px; }
-      #promptbar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 42px;
-        padding: 0 18px;
-        color: var(--muted);
-        border-bottom: 1px solid var(--border);
-        font-size: 12px;
-      }
-      #promptGlyph { color: var(--pink); font-size: 17px; }
-      #promptText { color: #9aa6cf; }
       #editor {
         flex: 1 1 auto;
         min-height: 0;
@@ -157,7 +145,6 @@
       @media (max-height: 520px) {
         #appShell { height: 100vh; }
         #topbar { min-height: 40px; }
-        #promptbar { min-height: 34px; }
       }
     </style>
   </head>
@@ -168,7 +155,6 @@
         <span id="topHint">tab workspace</span>
         <span id="mode">NORMAL</span>
       </header>
-      <div id="promptbar"><span id="promptGlyph">❯</span><span id="promptText">tabs · arrange, focus, and edit</span></div>
       <div id="staleBanner">⚠ browser state changed — press <strong>gr</strong> to refresh</div>
       <div id="editor"></div>
       <footer id="footer"><div id="statusbar">Loading workspace…</div><div id="footerHints">Enter focus · :w save · gr refresh · ? help</div></footer>
