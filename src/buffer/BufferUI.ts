@@ -67,6 +67,62 @@ export const faviconMap = new Map<number, string>();
 export const lineUrlMap = new Map<number, string>();
 export const lineKinds = new Map<number, LineKind>();
 export let titleColumn = 0;
+let pickerLines: number[] = [];
+let pickerIndex = 0;
+
+function fuzzyScore(query: string, value: string): number | null {
+  if (!query) return 0;
+  let cursor = 0;
+  let score = 0;
+  for (const character of query.toLowerCase()) {
+    const found = value.toLowerCase().indexOf(character, cursor);
+    if (found === -1) return null;
+    score += found === cursor ? 0 : found - cursor + 1;
+    cursor = found + 1;
+  }
+  return score;
+}
+
+function closePicker(): void {
+  document.getElementById("searchOverlay")?.classList.remove("open");
+  view.focus();
+}
+
+function renderPicker(): void {
+  const input = document.getElementById("searchInput") as HTMLInputElement | null;
+  const results = document.getElementById("searchResults");
+  if (!input || !results) return;
+  const query = input.value.trim();
+  const matches: { line: number; score: number; text: string }[] = [];
+  for (let line = 1; line <= view.state.doc.lines; line++) {
+    if (nonEditableLines.has(line)) continue;
+    const text = view.state.doc.line(line).text.replace(/^\u2063\d+\u2063/, "");
+    const score = fuzzyScore(query, text);
+    if (score !== null) matches.push({ line, score, text });
+  }
+  matches.sort((a, b) => a.score - b.score || a.line - b.line);
+  pickerLines = matches.slice(0, 80).map((match) => match.line);
+  pickerIndex = Math.min(pickerIndex, Math.max(0, pickerLines.length - 1));
+  results.replaceChildren(...matches.slice(0, 80).map((match, index) => {
+    const row = document.createElement("div");
+    row.className = `searchResult${index === pickerIndex ? " selected" : ""}`;
+    row.innerHTML = `<span class="searchResultIndex">${index + 1}</span><span class="searchResultText"></span>`;
+    row.querySelector(".searchResultText")!.textContent = match.text;
+    return row;
+  }));
+}
+
+function openPicker(): boolean {
+  const overlay = document.getElementById("searchOverlay");
+  const input = document.getElementById("searchInput") as HTMLInputElement | null;
+  if (!overlay || !input) return false;
+  overlay.classList.add("open");
+  input.value = "";
+  pickerIndex = 0;
+  renderPicker();
+  input.focus();
+  return true;
+}
 
 function remapLocalLineState(oldText: string, newText: string): void {
   const oldLines = oldText.split("\n");
@@ -369,6 +425,13 @@ export function setupBufferUI(): void {
           statusListener,
           Prec.highest(keymap.of([
             {
+              key: "/",
+              run: (v: EditorView) => {
+                const vs = getCM(v)?.state?.vim;
+                return !vs?.insertMode && !vs?.visualMode && openPicker();
+              },
+            },
+            {
               key: "Enter",
               run: (v: EditorView) => {
                 const cm = getCM(v);
@@ -465,6 +528,20 @@ export function setupBufferUI(): void {
     view.focus();
 
     setupVimCommands(view, save, focusTab);
+
+    const pickerInput = document.getElementById("searchInput") as HTMLInputElement | null;
+    pickerInput?.addEventListener("input", () => { pickerIndex = 0; renderPicker(); });
+    pickerInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closePicker(); return; }
+      if (event.key === "ArrowDown" || (event.ctrlKey && event.key === "n")) { event.preventDefault(); pickerIndex = Math.min(pickerIndex + 1, pickerLines.length - 1); renderPicker(); return; }
+      if (event.key === "ArrowUp" || (event.ctrlKey && event.key === "p")) { event.preventDefault(); pickerIndex = Math.max(pickerIndex - 1, 0); renderPicker(); return; }
+      if (event.key === "Enter" && pickerLines[pickerIndex] !== undefined) {
+        event.preventDefault();
+        const line = view.state.doc.line(pickerLines[pickerIndex]);
+        closePicker();
+        view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+      }
+    });
 
     browser.runtime.onMessage.addListener((rawMessage: unknown) => {
       const message = rawMessage as BgToBuffer;
