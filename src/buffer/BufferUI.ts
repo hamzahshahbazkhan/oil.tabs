@@ -11,7 +11,7 @@ import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
 import type { LineKind } from "../render/primitives";
-import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
+import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { bufferDarkTheme } from "./theme";
 
@@ -264,6 +264,11 @@ function updateMaps(snapshot: Snapshot, folders: FolderInfo[], tabFolderMap: Rec
   for (const [k, v] of newData.lineUrlMap) lineUrlMap.set(k, v);
   lineKinds.clear();
   for (const [k, v] of newData.lineKinds) lineKinds.set(k, v);
+  // Structural rows are navigation scaffolding, not editable tab records.
+  // Keep them out of both CodeMirror edits and movement commands.
+  for (const [line, kind] of newData.lineKinds) {
+    if (kind !== "tabRow") nonEditableLines.add(line);
+  }
   titleColumn = newData.titleColumn;
 }
 
@@ -424,7 +429,6 @@ export function setupBufferUI(): void {
           sectionLineDeco,
           nonEditableLineDeco,
           urlColorDeco,
-          faviconDeco,
           nonEditableTransactionFilter,
           statusListener,
           Prec.highest(keymap.of([
