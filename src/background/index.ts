@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, storageSessionRemove, storageSessionGet, storageSessionSet, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, claimBufferTab, storageSessionRemove, storageSessionGet, storageSessionSet, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
 import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
@@ -207,6 +207,9 @@ browser.runtime.onMessage.addListener(
           }
         }
         await storageSessionSet({ [ACTIVE_BUFFER_KEY]: senderTabId });
+        // Claim the page before takeSnapshot(). A newly-created popup may
+        // request data before openOrFocusBufferTab() has persisted its id.
+        await claimBufferTab(senderTabId, sender.tab?.windowId);
         await refreshBufferTabId();
         const snapshot = syncInited ? getSnapshot() : await takeSnapshot();
         const folderData = await loadFolderData();

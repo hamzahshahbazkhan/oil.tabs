@@ -213,6 +213,19 @@ export async function getBufferTabId(): Promise<number | undefined> {
   return stored[BUFFER_TAB_ID_KEY] as number | undefined;
 }
 
+/**
+ * Claim a loaded buffer page before its first snapshot request is handled.
+ * The page can send that request before windows.create() has finished
+ * persisting its returned tab id, so relying only on openOrFocusBufferTab()
+ * leaves a small but real initialization race.
+ */
+export async function claimBufferTab(tabId: number, windowId?: number): Promise<void> {
+  await storageSessionSet({
+    [BUFFER_TAB_ID_KEY]: tabId,
+    ...(windowId === undefined ? {} : { [BUFFER_WINDOW_ID_KEY]: windowId }),
+  });
+}
+
 export async function getBufferWindowId(): Promise<number | undefined> {
   const stored = await storageSessionGet(BUFFER_WINDOW_ID_KEY);
   return stored[BUFFER_WINDOW_ID_KEY] as number | undefined;
