@@ -20,6 +20,7 @@ let bufferTabId_: number | undefined;
 let registered = false;
 
 const pendingDetach = new Map<number, BufferLine>();
+const newlyCreatedTabs = new Set<number>();
 
 function cloneSnapshot(snapshot: Snapshot): Snapshot {
   return { takenAt: snapshot.takenAt, lines: snapshot.lines.map((line) => ({ ...line })) };
@@ -160,6 +161,8 @@ async function onTabCreated(tab: browser.Tabs.Tab): Promise<void> {
     tab.windowId === undefined
   )
     return;
+  newlyCreatedTabs.add(tab.id);
+  setTimeout(() => newlyCreatedTabs.delete(tab.id!), 10000);
   let currentTab = tab;
   try {
     // onCreated can fire before the browser has finalized group/index data.
@@ -187,6 +190,7 @@ async function onTabRemoved(
   tabId: number,
   _info: browser.Tabs.OnRemovedRemoveInfoType,
 ): Promise<void> {
+  newlyCreatedTabs.delete(tabId);
   pendingDetach.delete(tabId);
   const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
@@ -213,6 +217,29 @@ async function onTabUpdated(
 
   const idx = currentSnapshot.lines.findIndex((l) => l.tabId === tabId);
   if (idx === -1) return;
+  if (newlyCreatedTabs.has(tabId) && changeInfo.groupId === -1) {
+    newlyCreatedTabs.delete(tabId);
+  }
+
+  // Some browsers apply the new tab's inherited group after onCreated.
+  // Keep newly-created tabs ungrouped even when that assignment arrives
+  // asynchronously.
+  if (
+    newlyCreatedTabs.has(tabId) &&
+    hasTabUngroup &&
+    changeInfo.groupId !== undefined &&
+    changeInfo.groupId > -1
+  ) {
+    try {
+      await ungroupTabs([tabId]);
+      const freshTab = await browser.tabs.get(tabId);
+      currentSnapshot.lines[idx] = tabToBufferLine(freshTab);
+      scheduleNotify();
+      return;
+    } catch {
+      // Continue with the browser event data if the tab disappeared.
+    }
+  }
 
   const line = currentSnapshot.lines[idx];
   if (changeInfo.url !== undefined) {
