@@ -385,11 +385,15 @@ function applySnapshotUpdate(snapshot: Snapshot, folders?: FolderInfo[], tabFold
 }
 
 export function setupBufferUI(): void {
+  let initStage = "startup";
   try {
+    initStage = "settings";
     void browser.storage.sync.get("largeDiffConfirmThreshold").then((settings) => {
       const configured = Number(settings.largeDiffConfirmThreshold);
       if (Number.isFinite(configured) && configured >= 0) largeDiffThreshold = configured;
-    });
+    }).catch((error) => console.warn("tab-oil: unable to load settings", error));
+
+    initStage = "editor";
     const statusListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         if (!programmaticDispatch) {
@@ -527,8 +531,17 @@ export function setupBufferUI(): void {
 
     view.focus();
 
-    setupVimCommands(view, save, focusTab);
+    initStage = "commands";
+    try {
+      setupVimCommands(view, save, focusTab);
+    } catch (error) {
+      // Command registration is an enhancement. Never let one incompatible
+      // Vim API prevent the core buffer from rendering and syncing.
+      console.warn("tab-oil: optional Vim commands unavailable", error);
+      showToast("Some keyboard commands are unavailable; the tab buffer is still ready.");
+    }
 
+    initStage = "picker";
     const pickerInput = document.getElementById("searchInput") as HTMLInputElement | null;
     pickerInput?.addEventListener("input", () => { pickerIndex = 0; renderPicker(); });
     pickerInput?.addEventListener("keydown", (event) => {
@@ -543,9 +556,11 @@ export function setupBufferUI(): void {
       }
     });
 
+    initStage = "messages";
     browser.runtime.onMessage.addListener((rawMessage: unknown) => {
-      const message = rawMessage as BgToBuffer;
-      switch (message.type) {
+      try {
+        const message = rawMessage as BgToBuffer;
+        switch (message.type) {
         case "SNAPSHOT": {
           const shouldRestoreDraft = lastSnapshot === null;
           const draft = shouldRestoreDraft ? readDraft() : null;
@@ -578,12 +593,20 @@ export function setupBufferUI(): void {
         case "BUFFER_CONFLICT":
           showConflictBanner();
           break;
+        }
+      } catch (error) {
+        console.error("tab-oil snapshot error:", error);
+        showToast(`Unable to update tab buffer: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
-    browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
+    initStage = "snapshot";
+    void browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" }).catch((error) => {
+      console.error("tab-oil snapshot request error:", error);
+      showToast(`Unable to load tabs: ${error instanceof Error ? error.message : String(error)}`);
+    });
   } catch (e) {
     console.error("tab-oil init error:", e);
-    showToast(`Unable to initialize tab-oil: ${e instanceof Error ? e.message : String(e)}`);
+    showToast(`Unable to initialize tab-oil (${initStage}): ${e instanceof Error ? e.message : String(e)}`);
   }
 }
