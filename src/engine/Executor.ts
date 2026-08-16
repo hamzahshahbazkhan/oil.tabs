@@ -230,7 +230,17 @@ async function execSaveForLater(op: Operation & { kind: "saveForLater" }): Promi
     } catch {
       // Tab may already be gone
     }
-    await removeTab(op.tabId);
+    try {
+      await removeTab(op.tabId);
+    } catch (error) {
+      if (addedAt !== null) {
+        const current = await storageLocalGet("savedForLater");
+        const updated = ((current.savedForLater ?? []) as { url: string; title: string; savedAt: number }[])
+          .filter((item) => item.savedAt !== addedAt);
+        await storageLocalSet({ savedForLater: updated });
+      }
+      throw error;
+    }
   }
 
   return {
@@ -270,7 +280,12 @@ async function execBookmark(op: Operation & { kind: "bookmark" }): Promise<Journ
   const bmNode = await createBookmark({ title: op.title, url: op.url });
   bookmarkId = bmNode.id;
 
-  await removeTab(op.tabId);
+  try {
+    await removeTab(op.tabId);
+  } catch (error) {
+    try { await removeBookmark(bookmarkId); } catch { /* preserve the original tab-removal error */ }
+    throw error;
+  }
 
   return {
     description: `bookmark tab ${op.tabId}`,
