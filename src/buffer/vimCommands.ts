@@ -85,6 +85,19 @@ export function setupVimCommands(
 
   VimCompat.mapCommand("yy", "action", "yankUrl");
 
+  VimCompat.defineEx("yanktitle", "yt", () => {
+    const line = view.state.doc.lineAt(view.state.selection.main.head);
+    copyToClipboard(extractTitle(line.text), (ok) => flashStatus(ok ? "yanked title" : "clipboard blocked — failed to copy"));
+  });
+
+  VimCompat.defineEx("yankall", "ya", () => {
+    const urls: string[] = [];
+    for (let i = 1; i <= view.state.doc.lines; i++) {
+      if (!nonEditableLines.has(i) && idMap.has(i)) urls.push(extractUrl(view.state.doc.line(i).text));
+    }
+    copyToClipboard(urls.join("\n"), (ok) => flashStatus(ok ? `yanked ${urls.length} URLs` : "clipboard blocked — failed to copy"));
+  });
+
   VimCompat.defineEx("tab", "ta", (arg: string) => {
     if (!arg || arg.trim() === "") return;
     const q = arg.trim().toLowerCase();

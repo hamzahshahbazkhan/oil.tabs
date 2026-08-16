@@ -40,6 +40,7 @@ All keybindings work in **normal mode** (press `Esc` to enter normal mode).
 | `K`              | Swap the current line with the one above (reorder tab up)                     |
 | `yy`             | Yank: copy the tab's URL to clipboard and line text to vim's default register |
 | `gr`             | Refresh: discard local edits and reload the buffer from live browser state    |
+| `/`              | Open the Telescope-style fuzzy tab picker                                    |
 
 ### Motion & Editing
 
@@ -57,6 +58,16 @@ All standard Vim motions (`h`/`j`/`k`/`l`, `w`/`b`, `^`/`$`, `gg`/`G`, etc.) and
 | `:sleep`       | `:sl`         | Discard (sleep) selected tab lines. Works with visual selection (`V` then `:sleep`) to bulk-discard |
 | `:cnext`       | `:cn`         | Cycle to the next tab in most-recently-used (MRU) order                                             |
 | `:cprev`       | `:cp`         | Cycle to the previous tab in most-recently-used (MRU) order                                         |
+| `:bm`          | `:bookmark`   | Bookmark selected tabs and close them from the live workspace                                        |
+| `:e <url>`      | `:open <url>` | Open a new tab                                                                                       |
+| `:pin` / `:unp` |              | Pin or unpin selected tabs                                                                            |
+| `:mu`          | `:mute`       | Toggle mute on selected tabs                                                                         |
+| `:dup`         | `:duplicate`  | Duplicate selected tabs                                                                              |
+| `:only`        |              | Close all other tabs in the active window                                                            |
+| `:cl` / `:cr`  |              | Close tabs to the left or right of the selection                                                     |
+| `:nw [url]`     | `:new-window` | Open a new browser window                                                                            |
+| `:us`           | `:undo-save`  | Roll back the last completed save when possible                                                      |
+| `:ya`           | `:yankall`    | Copy all live tab URLs                                                                              |
 
 ### Using `:sleep`
 
