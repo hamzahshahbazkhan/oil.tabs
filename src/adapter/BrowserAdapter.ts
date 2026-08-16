@@ -153,10 +153,12 @@ export async function openOrFocusBufferTab(): Promise<void> {
   if (existingWindowId !== undefined) {
     try {
       const win = await getWindow(existingWindowId);
-      if (win) {
+      const tabs = await queryTabs({ windowId: existingWindowId });
+      if (win && tabs.some((tab) => tab.id === existingTabId)) {
         await updateWindow(win.id!, { focused: true });
         return;
       }
+      await storageSessionRemove([BUFFER_TAB_ID_KEY, BUFFER_WINDOW_ID_KEY]);
     } catch {
       await storageSessionRemove([BUFFER_TAB_ID_KEY, BUFFER_WINDOW_ID_KEY]);
     }
@@ -233,7 +235,11 @@ export async function takeSnapshot(): Promise<Snapshot> {
       continue;
 
     const url = tab.url;
-    const editable = true;
+    const editable = !(
+      url.startsWith("about:") ||
+      url.startsWith("chrome:") ||
+      url === ""
+    );
     const favIconUrl =
       tab.favIconUrl &&
       (tab.favIconUrl.startsWith("http") || tab.favIconUrl.startsWith("data:"))

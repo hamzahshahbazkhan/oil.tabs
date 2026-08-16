@@ -56,28 +56,25 @@ async function cycleTab(dir: "next" | "prev"): Promise<void> {
   const currentId = tabs[0]?.id;
   if (currentId === undefined) return;
 
+  const bufferTabId = await getBufferTabId();
   const { mruTabIds } = await storageLocalGet("mruTabIds");
-  const list: number[] = mruTabIds ?? [];
-  const idx = list.indexOf(currentId);
-  if (idx === -1) return;
-
-  const step = dir === "next" ? -1 : 1;
-  let targetIdx = (idx + step + list.length) % list.length;
-  let attempts = 0;
-  while (attempts < list.length) {
-    const targetId = list[targetIdx];
-    if (targetId !== currentId) {
-      try {
-        await browser.tabs.update(targetId, { active: true });
-        return;
-      } catch {
-        list.splice(targetIdx, 1);
-        if (targetIdx <= idx) break;
-      }
+  const list: number[] = [];
+  for (const id of (mruTabIds ?? []) as number[]) {
+    if (id === bufferTabId || list.includes(id)) continue;
+    try {
+      await browser.tabs.get(id);
+      list.push(id);
+    } catch {
+      // Stale tabs are removed from the persisted list below.
     }
-    targetIdx = (targetIdx + step + list.length) % list.length;
-    attempts++;
   }
+  await browser.storage.local.set({ mruTabIds: list.slice(0, MRU_MAX) });
+  if (list.length < 2) return;
+  const idx = list.indexOf(currentId);
+  const step = dir === "next" ? -1 : 1;
+  const start = idx === -1 ? (dir === "next" ? 0 : list.length - 1) : idx;
+  const targetIdx = (start + step + list.length) % list.length;
+  await browser.tabs.update(list[targetIdx], { active: true });
 }
 
 async function focusOrOpen(url: string): Promise<void> {
@@ -113,6 +110,12 @@ browser.windows.onRemoved.addListener(async (windowId) => {
     await storageSessionRemove(["bufferTabId", "bufferWindowId"]);
     await refreshBufferTabId();
   }
+});
+
+browser.tabs.onRemoved.addListener(async (tabId) => {
+  if (await getBufferTabId() !== tabId) return;
+  await storageSessionRemove(["bufferTabId", "bufferWindowId"]);
+  await refreshBufferTabId();
 });
 
 browser.action.onClicked.addListener(async () => {
@@ -161,6 +164,7 @@ browser.runtime.onMessage.addListener(
   async (message: any, sender: browser.runtime.MessageSender) => {
     switch (message.type) {
       case "REQUEST_SNAPSHOT": {
+        await refreshBufferTabId();
         const snapshot = syncInited ? getSnapshot() : await takeSnapshot();
         const { urlMap } = formatSnapshot(snapshot);
         const folderData = await loadFolderData();
@@ -186,7 +190,6 @@ browser.runtime.onMessage.addListener(
 
           const parsed = parse(message.text, urlMap);
 
-          const fallbackTabIds = new Set<number>();
           if (currentUrlMap) {
             const existingIds = new Set(snapshot.lines.map(l => l.tabId));
             const assignedIds = new Set<number>();
@@ -200,7 +203,6 @@ browser.runtime.onMessage.addListener(
                 if (prevId !== undefined) {
                   p.tabId = prevId;
                   assignedIds.add(prevId);
-                  fallbackTabIds.add(prevId);
                 }
               }
             }
@@ -222,10 +224,7 @@ browser.runtime.onMessage.addListener(
           }
           const savedUrls = new Set(storedSavedForLater.map((item: SavedItem) => item.url));
           const ops = diff(snapshot, parsed, folderMap, savedUrls);
-          const filteredOps = fallbackTabIds.size > 0
-            ? ops.filter(op => !(op.kind === "navigate" && fallbackTabIds.has((op as any).tabId)))
-            : ops;
-          const plannedOps = plan(filteredOps, snapshot);
+          const plannedOps = plan(ops, snapshot);
           const result = await execute(plannedOps, snapshot);
           try {
             await browser.tabs.update(sender.tab!.id!, { active: true });

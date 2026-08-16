@@ -39,7 +39,7 @@ function tabToBufferLine(tab: browser.tabs.Tab): BufferLine {
       tab.url?.startsWith("chrome:") ||
       tab.url === ""
     ),
-    groupId: tab.groupId ?? null,
+    groupId: tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
     favIconUrl: favIconUrl(tab),
   };
 }
@@ -113,9 +113,16 @@ export async function init(snapshot: Snapshot): Promise<void> {
     browser.tabs.onMoved.addListener(onTabMoved);
     browser.tabs.onAttached.addListener(onTabAttached);
     browser.tabs.onDetached.addListener(onTabDetached);
+    browser.tabs.onRemoved.addListener(onBufferTabRemoved);
     browser.windows.onCreated.addListener(onWindowCreated);
     browser.windows.onRemoved.addListener(onWindowRemoved);
   }
+}
+
+async function onBufferTabRemoved(tabId: number): Promise<void> {
+  if (tabId !== bufferTabId_) return;
+  bufferTabId_ = undefined;
+  await refreshBufferTabId();
 }
 
 export function getSnapshot(): Snapshot {
@@ -175,7 +182,8 @@ async function onTabUpdated(
     !changeInfo.title &&
     changeInfo.discarded === undefined &&
     changeInfo.pinned === undefined &&
-    changeInfo.favIconUrl === undefined
+    changeInfo.favIconUrl === undefined &&
+    changeInfo.groupId === undefined
   )
     return;
 
@@ -188,6 +196,9 @@ async function onTabUpdated(
   if (changeInfo.discarded !== undefined)
     line.discarded = tab.discarded ?? line.discarded;
   if (changeInfo.pinned !== undefined) line.pinned = tab.pinned ?? line.pinned;
+  if (changeInfo.groupId !== undefined) {
+    line.groupId = changeInfo.groupId > -1 ? changeInfo.groupId : null;
+  }
   if (changeInfo.favIconUrl !== undefined) line.favIconUrl = tab.favIconUrl;
 
   scheduleNotify();
