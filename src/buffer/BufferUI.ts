@@ -27,6 +27,7 @@ let dirty = false;
 let programmaticDispatch = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let largeDiffThreshold = LARGE_DIFF_THRESHOLD;
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 const DRAFT_KEY = "tab-oil.buffer.draft";
 const CURSOR_KEY = "tab-oil.buffer.cursor";
 
@@ -120,7 +121,9 @@ function updateStatusBar(): void {
   if (promptEl) promptEl.textContent = mode === "INSERT" ? "type to edit · Esc for normal mode" : "tabs · arrange, focus, and edit";
   const el = document.getElementById("statusbar");
   if (el) {
-    el.textContent = `${tabLines.length} tabs · ${windowHeaders.length} windows · b${__BUILD_HASH__}`;
+    el.textContent = tabLines.length === 0
+      ? `No tabs open · b${__BUILD_HASH__}`
+      : `${tabLines.length} tabs · ${windowHeaders.length} windows · b${__BUILD_HASH__}`;
   }
 }
 
@@ -147,6 +150,15 @@ function hideStaleBanner(): void {
   if (el) el.style.display = "none";
 }
 
+function showToast(message: string): void {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add("visible");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("visible"), 4200);
+}
+
 function save(force: boolean): void {
   if (!lastSnapshot) return;
   const text = view.state.doc.toString();
@@ -157,7 +169,7 @@ function save(force: boolean): void {
   try {
     ops = diff(lastSnapshot, parsed, undefined, savedUrls);
   } catch (error) {
-    alert(`tab-oil error: ${error instanceof Error ? error.message : String(error)}`);
+    showToast(`Could not save: ${error instanceof Error ? error.message : String(error)}`);
     return;
   }
   const closeCount = ops.filter((op) => op.kind === "close").length;
@@ -480,7 +492,7 @@ export function setupBufferUI(): void {
             renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, false);
             updateStatusBar();
           } else {
-            alert(`tab-oil error: ${message.error}`);
+            showToast(message.error ? `tab-oil: ${message.error}` : "tab-oil: operation failed");
           }
           break;
         case "SNAPSHOT_UPDATED":
@@ -495,6 +507,6 @@ export function setupBufferUI(): void {
     browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
   } catch (e) {
     console.error("tab-oil init error:", e);
-    document.body.textContent = `tab-oil init error: ${e}`;
+    showToast(`Unable to initialize tab-oil: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
