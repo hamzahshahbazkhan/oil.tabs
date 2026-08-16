@@ -27,6 +27,37 @@ let dirty = false;
 let programmaticDispatch = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let largeDiffThreshold = LARGE_DIFF_THRESHOLD;
+const DRAFT_KEY = "tab-oil.buffer.draft";
+const CURSOR_KEY = "tab-oil.buffer.cursor";
+
+function readDraft(): string | null {
+  try { return localStorage.getItem(DRAFT_KEY); } catch { return null; }
+}
+
+function writeDraft(text: string): void {
+  try { localStorage.setItem(DRAFT_KEY, text); } catch { /* storage may be unavailable */ }
+}
+
+function clearDraft(): void {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage may be unavailable */ }
+}
+
+function saveCursor(position: number): void {
+  try { localStorage.setItem(CURSOR_KEY, String(position)); } catch { /* storage may be unavailable */ }
+}
+
+function restoreDraft(text: string): void {
+  const liveText = view.state.doc.toString();
+  if (text === liveText) return;
+  programmaticDispatch = true;
+  try {
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+  } finally {
+    programmaticDispatch = false;
+  }
+  remapLocalLineState(liveText, text);
+  dirty = true;
+}
 
 // Shared state maps used by decorations
 export const idMap = new Map<number, number>();
@@ -288,8 +319,10 @@ export function setupBufferUI(): void {
         if (!programmaticDispatch) {
           remapLocalLineState(update.startState.doc.toString(), update.state.doc.toString());
           dirty = true;
+          writeDraft(update.state.doc.toString());
         }
       }
+      if (update.selectionSet) saveCursor(update.state.selection.main.head);
       if (update.docChanged || update.selectionSet) scheduleStatusUpdate();
     });
 
@@ -416,13 +449,25 @@ export function setupBufferUI(): void {
     browser.runtime.onMessage.addListener((rawMessage: unknown) => {
       const message = rawMessage as BgToBuffer;
       switch (message.type) {
-        case "SNAPSHOT":
+        case "SNAPSHOT": {
+          const shouldRestoreDraft = lastSnapshot === null;
+          const draft = shouldRestoreDraft ? readDraft() : null;
+          if (!shouldRestoreDraft) clearDraft();
           hideStaleBanner();
           renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, true);
+          if (draft !== null) restoreDraft(draft);
+          try {
+            const savedCursor = Number(localStorage.getItem(CURSOR_KEY));
+            if (Number.isFinite(savedCursor) && savedCursor >= 0) {
+              view.dispatch({ selection: { anchor: Math.min(savedCursor, view.state.doc.length) } });
+            }
+          } catch { /* storage may be unavailable */ }
           updateStatusBar();
           break;
+        }
         case "APPLY_RESULT":
           if (message.ok) {
+            clearDraft();
             hideStaleBanner();
             renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, false);
             updateStatusBar();
