@@ -307,6 +307,34 @@ browser.runtime.onMessage.addListener(
         break;
       }
 
+      case "BOOKMARK_TABS": {
+        await withSaveLock(async () => {
+          const snapshot = await takeSnapshot();
+          const ops = message.tabIds.flatMap((tabId: number) => {
+            const line = snapshot.lines.find((item) => item.tabId === tabId);
+            return line ? [{ kind: "bookmark" as const, tabId, url: line.url, title: line.title }] : [];
+          });
+          const result = await execute(plan(ops, snapshot), snapshot);
+          const freshSnapshot = await takeSnapshot();
+          replaceSnapshot(freshSnapshot);
+          try {
+            await browser.tabs.sendMessage(sender.tab!.id!, {
+              type: "APPLY_RESULT",
+              ok: result.ok,
+              error: "error" in result ? result.error : undefined,
+              snapshot: freshSnapshot,
+            } satisfies BgToBuffer);
+          } catch {
+            // Buffer may have closed while the operation was running.
+          }
+        });
+        break;
+      }
+
+      case "OPEN_TAB":
+        await browser.tabs.create({ url: message.url });
+        break;
+
       case "CYCLE_NEXT":
         await cycleTab("next");
         break;

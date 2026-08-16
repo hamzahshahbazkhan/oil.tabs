@@ -19,5 +19,7 @@ export type BufferToBg =
   | { type: "DISCARD_TABS"; tabIds: number[] }
   | { type: "RELOAD_TABS"; tabIds: number[] }
   | { type: "TOGGLE_MUTE_TABS"; tabIds: number[] }
+  | { type: "BOOKMARK_TABS"; tabIds: number[] }
+  | { type: "OPEN_TAB"; url: string }
   | { type: "CYCLE_NEXT" }
   | { type: "CYCLE_PREV" };

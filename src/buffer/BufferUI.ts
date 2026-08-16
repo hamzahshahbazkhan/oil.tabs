@@ -345,39 +345,14 @@ export function setupBufferUI(): void {
             {
               key: "Ctrl-Enter",
               run: (v: EditorView) => {
+                const cm = getCM(v);
+                const vs = cm?.state?.vim;
+                if (!vs || vs.insertMode || vs.visualMode) return false;
                 const cursor = v.state.selection.main.head;
                 const line = v.state.doc.lineAt(cursor);
                 const tabId = idMap.get(line.number);
                 if (tabId !== undefined) {
                   browser.runtime.sendMessage({ type: "FOCUS_TAB", tabId });
-                  return true;
-                }
-                return false;
-              },
-            },
-            {
-              key: "Ctrl-r",
-              run: (v: EditorView) => {
-                const cm = getCM(v);
-                const vs = cm?.state?.vim;
-                if (!vs || vs.insertMode) return false;
-
-                const tabIds: number[] = [];
-                const sel = v.state.selection.main;
-                const fromLine = v.state.doc.lineAt(sel.from);
-                const toLine = v.state.doc.lineAt(sel.to);
-                const seen = new Set<number>();
-
-                for (let i = fromLine.number; i <= toLine.number; i++) {
-                  const tabId = idMap.get(i);
-                  if (tabId !== undefined && !seen.has(tabId)) {
-                    seen.add(tabId);
-                    tabIds.push(tabId);
-                  }
-                }
-
-                if (tabIds.length > 0) {
-                  browser.runtime.sendMessage({ type: "RELOAD_TABS", tabIds });
                   return true;
                 }
                 return false;

@@ -2,7 +2,7 @@ import browser from "webextension-polyfill";
 import type { EditorView } from "@codemirror/view";
 import { Vim } from "@replit/codemirror-vim";
 import { idMap, nonEditableLines } from "./BufferUI";
-import { extractUrl, extractTitle } from "../model/Parser";
+import { extractUrl, extractTitle, normalizeUrl } from "../model/Parser";
 
 export function setupVimCommands(
   view: EditorView,
@@ -149,16 +149,40 @@ export function setupVimCommands(
     browser.runtime.sendMessage({ type: "CYCLE_PREV" });
   });
 
-  Vim.defineEx("sleep", "sl", () => {
+  const selectedTabIds = (): number[] => {
     const sel = view.state.selection.main;
     const fromLine = view.state.doc.lineAt(sel.from);
     const toLine = view.state.doc.lineAt(sel.to);
     const tabIds: number[] = [];
+    const seen = new Set<number>();
     for (let i = fromLine.number; i <= toLine.number; i++) {
       if (nonEditableLines.has(i)) continue;
       const tabId = idMap.get(i);
-      if (tabId !== undefined) tabIds.push(tabId);
+      if (tabId !== undefined && !seen.has(tabId)) {
+        seen.add(tabId);
+        tabIds.push(tabId);
+      }
     }
+    return tabIds;
+  };
+
+  Vim.defineEx("bookmark", "bm", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "BOOKMARK_TABS", tabIds });
+  });
+
+  Vim.defineEx("open", "e", (arg: string) => {
+    const url = normalizeUrl(arg.trim());
+    if (url) browser.runtime.sendMessage({ type: "OPEN_TAB", url });
+  });
+
+  Vim.defineEx("reload", "rel", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "RELOAD_TABS", tabIds });
+  });
+
+  Vim.defineEx("sleep", "sl", () => {
+    const tabIds = selectedTabIds();
     if (tabIds.length > 0) {
       browser.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });
     }
