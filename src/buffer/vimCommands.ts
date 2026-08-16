@@ -7,14 +7,21 @@ import { extractUrl, extractTitle, normalizeUrl } from "../model/Parser";
 // The package's declarations lag its runtime API (notably Ex callbacks and mapCommand).
 // Keep the compatibility boundary local instead of weakening the rest of the codebase.
 const VimCompat = Vim as any;
+const defineEx = (...args: any[]): void => {
+  try {
+    VimCompat.defineEx(...args);
+  } catch (error) {
+    console.warn(`tab-oil: unable to register Ex command ${String(args[0])}`, error);
+  }
+};
 
 export function setupVimCommands(
   view: EditorView,
   save: (force: boolean) => void,
   focusTab: (tabId: number) => void,
 ): void {
-  VimCompat.defineEx("w", "w", () => save(false));
-  VimCompat.defineEx("w!", "w!", () => save(true));
+  defineEx("w", "w", () => save(false));
+  defineEx("w!", "w!", () => save(true));
 
   VimCompat.defineAction("focusTab", (_cm: EditorView) => {
     const cursor = view.state.selection.main.head;
@@ -85,12 +92,12 @@ export function setupVimCommands(
 
   VimCompat.mapCommand("yy", "action", "yankUrl");
 
-  VimCompat.defineEx("yanktitle", "yt", () => {
+  defineEx("yanktitle", "yt", () => {
     const line = view.state.doc.lineAt(view.state.selection.main.head);
     copyToClipboard(extractTitle(line.text), (ok) => flashStatus(ok ? "yanked title" : "clipboard blocked — failed to copy"));
   });
 
-  VimCompat.defineEx("yankall", "ya", () => {
+  defineEx("yankall", "ya", () => {
     const urls: string[] = [];
     for (let i = 1; i <= view.state.doc.lines; i++) {
       if (!nonEditableLines.has(i) && idMap.has(i)) urls.push(extractUrl(view.state.doc.line(i).text));
@@ -98,7 +105,7 @@ export function setupVimCommands(
     copyToClipboard(urls.join("\n"), (ok) => flashStatus(ok ? `yanked ${urls.length} URLs` : "clipboard blocked — failed to copy"));
   });
 
-  VimCompat.defineEx("tab", "ta", (arg: string) => {
+  defineEx("tab", "ta", (arg: string) => {
     if (!arg || arg.trim() === "") return;
     const q = arg.trim().toLowerCase();
     for (let i = 1; i <= view.state.doc.lines; i++) {
@@ -165,14 +172,14 @@ export function setupVimCommands(
   VimCompat.defineAction("closeBuffer", closeBuffer);
   VimCompat.mapCommand("-", "action", "closeBuffer", { context: "normal" });
 
-  VimCompat.defineEx("q", "q", closeBuffer);
-  VimCompat.defineEx("quit", "quit", closeBuffer);
+  defineEx("q", "q", closeBuffer);
+  defineEx("quit", "quit", closeBuffer);
 
-  VimCompat.defineEx("cnext", "cn", () => {
+  defineEx("cnext", "cn", () => {
     browser.runtime.sendMessage({ type: "CYCLE_NEXT" });
   });
 
-  VimCompat.defineEx("cprev", "cp", () => {
+  defineEx("cprev", "cp", () => {
     browser.runtime.sendMessage({ type: "CYCLE_PREV" });
   });
 
@@ -193,57 +200,57 @@ export function setupVimCommands(
     return tabIds;
   };
 
-  VimCompat.defineEx("pin", "pin", () => {
+  defineEx("pin", "pin", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: true });
   });
-  VimCompat.defineEx("unpin", "unp", () => {
+  defineEx("unpin", "unp", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: false });
   });
-  VimCompat.defineEx("mute", "mu", () => {
+  defineEx("mute", "mu", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "TOGGLE_MUTE_TABS", tabIds });
   });
-  VimCompat.defineEx("duplicate", "dup", () => {
+  defineEx("duplicate", "dup", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "DUPLICATE_TABS", tabIds });
   });
-  VimCompat.defineEx("only", "only", () => {
+  defineEx("only", "only", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_OTHER_TABS", tabIds });
   });
-  VimCompat.defineEx("closeleft", "cl", () => {
+  defineEx("closeleft", "cl", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_SIDE_TABS", tabIds, side: "left" });
   });
-  VimCompat.defineEx("closeright", "cr", () => {
+  defineEx("closeright", "cr", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "CLOSE_SIDE_TABS", tabIds, side: "right" });
   });
-  VimCompat.defineEx("new-window", "nw", (arg: string) => {
+  defineEx("new-window", "nw", (arg: string) => {
     browser.runtime.sendMessage({ type: "CREATE_WINDOW", url: arg.trim() || undefined });
   });
-  VimCompat.defineEx("undo-save", "us", () => {
+  defineEx("undo-save", "us", () => {
     browser.runtime.sendMessage({ type: "UNDO_SAVE" });
   });
 
-  VimCompat.defineEx("bookmark", "bm", () => {
+  defineEx("bookmark", "bm", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "BOOKMARK_TABS", tabIds });
   });
 
-  VimCompat.defineEx("open", "e", (arg: string) => {
+  defineEx("open", "e", (arg: string) => {
     const url = normalizeUrl(arg.trim());
     if (url) browser.runtime.sendMessage({ type: "OPEN_TAB", url });
   });
 
-  VimCompat.defineEx("reload", "rel", () => {
+  defineEx("reload", "rel", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "RELOAD_TABS", tabIds });
   });
 
-  VimCompat.defineEx("sleep", "sl", () => {
+  defineEx("sleep", "sl", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) {
       browser.runtime.sendMessage({ type: "DISCARD_TABS", tabIds });
