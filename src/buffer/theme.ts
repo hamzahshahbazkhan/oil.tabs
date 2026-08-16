@@ -19,6 +19,7 @@ export const bufferDarkTheme = EditorView.theme({
   ".cm-urlMuted": { color: "#697398" },
   ".cm-headerLine .cm-lineNumbers .cm-gutterElement": { backgroundColor: "#202b45", color: "#d8def8" },
   ".cm-nonEditable": { opacity: 0.62, pointerEvents: "none" },
+  "img.cm-favicon": { width: "16px", height: "16px", verticalAlign: "middle", marginRight: "7px", marginLeft: "2px" },
   "&.cm-focused .cm-cursorLayer .cm-cursor": { visibility: "visible" },
   ".cm-selectionMatch": { backgroundColor: "#34466f" },
   ".cm-selectionLayer .cm-selectionBackground": { backgroundColor: "#34466f" },

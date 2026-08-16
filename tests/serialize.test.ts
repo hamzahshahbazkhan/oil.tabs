@@ -23,7 +23,6 @@ const dupFixture: Snapshot = {
 
 // First tab row within a window starts at index 1 (window header is line 0).
 const ROW = 1;
-const hiddenId = (id: number): string => `\u2063${id.toString(2).replace(/0/g, "\u200B").replace(/1/g, "\u200C")}\u2064`;
 
 describe("formatSnapshot", () => {
   it("starts with the window header and aligns columns", () => {
@@ -277,3 +276,4 @@ describe("extractUrl", () => {
     expect(extractUrl("[42] https://example.com/")).toBe("https://example.com/");
   });
 });
+const hiddenId = (id: number): string => `\u200D${[...id.toString(16)].map((digit) => String.fromCharCode(0xFE00 + parseInt(digit, 16))).join("")}\u200D`;

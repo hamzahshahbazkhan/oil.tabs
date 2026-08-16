@@ -7,6 +7,7 @@ const SAVED_HEADER_RE = /^▸ Saved/;
 const RULE_LINE_RE = /─{3,}$/;
 const TAB_ID_RE = /^\[\s*\d+\]\s*/;
 const HIDDEN_TAB_ID_RE = /^\u2063([\u200B\u200C]+)\u2064/;
+const ZERO_WIDTH_TAB_ID_RE = /^\u200D([\uFE00-\uFE0F]+)\u200D/;
 const LEGACY_HIDDEN_TAB_ID_RE = /^\u2063(\d+)\u2063/;
 
 export function extractTabId(line: string): number | null {
@@ -15,6 +16,10 @@ export function extractTabId(line: string): number | null {
     const bits = [...hidden[1]].map((character) => character === "\u200C" ? "1" : "0").join("");
     return parseInt(bits, 2);
   }
+  const zeroWidth = line.match(ZERO_WIDTH_TAB_ID_RE);
+  if (zeroWidth) {
+    return parseInt([...zeroWidth[1]].map((character) => (character.charCodeAt(0) - 0xFE00).toString(16)).join(""), 16);
+  }
   const legacyHidden = line.match(LEGACY_HIDDEN_TAB_ID_RE);
   if (legacyHidden) return parseInt(legacyHidden[1], 10);
   const match = line.match(/^\[\s*(\d+)\]/);
@@ -22,7 +27,7 @@ export function extractTabId(line: string): number | null {
 }
 
 function stripTabId(line: string): string {
-  return line.replace(HIDDEN_TAB_ID_RE, "").replace(LEGACY_HIDDEN_TAB_ID_RE, "").replace(TAB_ID_RE, "");
+  return line.replace(HIDDEN_TAB_ID_RE, "").replace(ZERO_WIDTH_TAB_ID_RE, "").replace(LEGACY_HIDDEN_TAB_ID_RE, "").replace(TAB_ID_RE, "");
 }
 
 export function normalizeUrl(url: string): string {

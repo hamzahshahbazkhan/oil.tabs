@@ -2,11 +2,10 @@ import type { LineKind, RenderedLine } from "./primitives";
 
 const SEP_WIDTH = 72;
 
-// Keep tab identity in the editable document without exposing numeric IDs.
-// Zero-width characters survive CodeMirror edits but render as no visible text.
 function encodeTabId(tabId: number): string {
-  const bits = tabId.toString(2).replace(/0/g, "\u200B").replace(/1/g, "\u200C");
-  return `\u2063${bits}\u2064`;
+  const hex = tabId.toString(16);
+  const selectors = [...hex].map((digit) => String.fromCharCode(0xFE00 + parseInt(digit, 16))).join("");
+  return `\u200D${selectors}\u200D`;
 }
 
 export interface RenderedDocument {

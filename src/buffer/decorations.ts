@@ -159,7 +159,9 @@ function buildFaviconDecorations(state: EditorState): DecorationSet {
     const storedUrl = lineUrlMap.get(i);
     const showPlaceholder = storedUrl !== undefined && docUrl !== storedUrl;
     const faviconUrl = showPlaceholder ? "" : (faviconMap.get(i) ?? "");
-    builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(faviconUrl), side: -1 }));
+    if (faviconUrl) {
+      builder.add(line.from, line.from, Decoration.widget({ widget: new FaviconWidget(faviconUrl), side: -1 }));
+    }
   }
   return builder.finish();
 }

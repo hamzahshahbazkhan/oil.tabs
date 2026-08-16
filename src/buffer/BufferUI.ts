@@ -11,7 +11,7 @@ import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { Snapshot } from "../shared/types";
 import type { SavedItem } from "../shared/storageSchema";
 import type { LineKind } from "../render/primitives";
-import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco } from "./decorations";
+import { headerLineDeco, sectionLineDeco, nonEditableLineDeco, nonEditableTransactionFilter, urlColorDeco, faviconDeco } from "./decorations";
 import { setupVimCommands } from "./vimCommands";
 import { bufferDarkTheme } from "./theme";
 
@@ -96,7 +96,7 @@ function renderPicker(): void {
   const matches: { line: number; score: number; text: string }[] = [];
   for (let line = 1; line <= view.state.doc.lines; line++) {
     if (nonEditableLines.has(line)) continue;
-    const text = view.state.doc.line(line).text.replace(/^\u2063[\u200B\u200C]+\u2064/, "");
+    const text = view.state.doc.line(line).text.replace(/^\u200D[\uFE00-\uFE0F]+\u200D/, "");
     const score = fuzzyScore(query, text);
     if (score !== null) matches.push({ line, score, text });
   }
@@ -429,6 +429,7 @@ export function setupBufferUI(): void {
           sectionLineDeco,
           nonEditableLineDeco,
           urlColorDeco,
+          faviconDeco,
           nonEditableTransactionFilter,
           statusListener,
           Prec.highest(keymap.of([
