@@ -6,6 +6,7 @@ const BUFFER_TAB_ID_KEY = "bufferTabId";
 const BUFFER_WINDOW_ID_KEY = "bufferWindowId";
 
 export const hasTabGroups = typeof (browser.tabs as any).group === "function";
+export const hasTabUngroup = typeof (browser.tabs as any).ungroup === "function";
 export const hasDiscard = typeof (browser.tabs as any).discard === "function";
 export const hasBookmarks =
   typeof (browser as any).bookmarks?.create === "function";
@@ -52,6 +53,10 @@ export async function groupTabs(params: {
   groupId?: number;
 }): Promise<number> {
   return (browser.tabs as any).group(params);
+}
+
+export async function ungroupTabs(tabIds: number[]): Promise<void> {
+  await (browser.tabs as any).ungroup(tabIds);
 }
 
 export async function queryTabs(

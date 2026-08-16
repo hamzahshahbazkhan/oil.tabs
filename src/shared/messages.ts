@@ -22,6 +22,7 @@ export type BufferToBg =
   | { type: "BOOKMARK_TABS"; tabIds: number[] }
   | { type: "OPEN_TAB"; url: string }
   | { type: "SET_PINNED_TABS"; tabIds: number[]; pinned: boolean }
+  | { type: "UNGROUP_TABS"; tabIds: number[] }
   | { type: "DUPLICATE_TABS"; tabIds: number[] }
   | { type: "CLOSE_OTHER_TABS"; tabIds: number[] }
   | { type: "CLOSE_SIDE_TABS"; tabIds: number[]; side: "left" | "right" }

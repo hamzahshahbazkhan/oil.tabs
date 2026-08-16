@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, claimBufferTab, storageSessionRemove, storageSessionGet, storageSessionSet, storageLocalGet, updateWindow, discardTab, createWindow } from "../adapter/BrowserAdapter";
+import { openOrFocusBufferTab, getBufferTabId, getBufferWindowId, takeSnapshot, claimBufferTab, storageSessionRemove, storageSessionGet, storageSessionSet, storageLocalGet, updateWindow, discardTab, createWindow, ungroupTabs, hasTabUngroup } from "../adapter/BrowserAdapter";
 import { parse } from "../model/Parser";
 import { formatSnapshot } from "../render/tabs";
 import { diff } from "../engine/DiffEngine";
@@ -89,6 +89,8 @@ function isBufferMessage(value: unknown): value is BufferToBg {
       return isTabIdList(message.tabIds);
     case "SET_PINNED_TABS":
       return isTabIdList(message.tabIds) && typeof message.pinned === "boolean";
+    case "UNGROUP_TABS":
+      return isTabIdList(message.tabIds);
     case "CLOSE_SIDE_TABS":
       return isTabIdList(message.tabIds) && (message.side === "left" || message.side === "right");
     case "OPEN_TAB":
@@ -408,6 +410,12 @@ browser.runtime.onMessage.addListener(
         for (const tabId of message.tabIds) {
           try { await browser.tabs.update(tabId, { pinned: message.pinned }); } catch { /* tab closed */ }
         }
+        if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
+        break;
+
+      case "UNGROUP_TABS":
+        if (!isTabIdList(message.tabIds) || !hasTabUngroup) return;
+        try { await ungroupTabs(message.tabIds); } catch { /* tabs may have closed */ }
         if (sender.tab?.id) await syncBufferSnapshot(sender.tab.id);
         break;
 

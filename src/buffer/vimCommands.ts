@@ -208,6 +208,10 @@ export function setupVimCommands(
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "SET_PINNED_TABS", tabIds, pinned: false });
   });
+  defineEx("ungroup", "ug", () => {
+    const tabIds = selectedTabIds();
+    if (tabIds.length > 0) browser.runtime.sendMessage({ type: "UNGROUP_TABS", tabIds });
+  });
   defineEx("mute", "mu", () => {
     const tabIds = selectedTabIds();
     if (tabIds.length > 0) browser.runtime.sendMessage({ type: "TOGGLE_MUTE_TABS", tabIds });
