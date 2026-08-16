@@ -15,6 +15,7 @@ function pushTabRows(
   folderById: Map<number, string>,
   tabFolderMap?: Record<number, number>,
 ): void {
+  const firstIndex = (group: BufferLine[]): number => Math.min(...group.map((tab) => tab.index));
   const folderGroups = new Map<number | string, BufferLine[]>();
   for (const tab of tabs) {
     const folderKey = tabFolderMap && tab.tabId !== null ? tabFolderMap[tab.tabId] ?? "__nofolder" : "__nofolder";
@@ -26,11 +27,9 @@ function pushTabRows(
     }
   }
 
-  const folderKeys = [...folderGroups.keys()].sort((a, b) => {
-    if (a === "__nofolder") return 1;
-    if (b === "__nofolder") return -1;
-    return (a as number) - (b as number);
-  });
+  const folderKeys = [...folderGroups.keys()].sort((a, b) =>
+    firstIndex(folderGroups.get(a)!) - firstIndex(folderGroups.get(b)!),
+  );
 
   for (const folderKey of folderKeys) {
     const folderTabs = folderGroups.get(folderKey)!;
@@ -50,11 +49,9 @@ function pushTabRows(
       }
     }
 
-    const groupKeys = [...groups.keys()].sort((a, b) => {
-      if (a === "__ungrouped") return 1;
-      if (b === "__ungrouped") return -1;
-      return (a as number) - (b as number);
-    });
+    const groupKeys = [...groups.keys()].sort((a, b) =>
+      firstIndex(groups.get(a)!) - firstIndex(groups.get(b)!),
+    );
 
     for (const key of groupKeys) {
       const groupTabs = groups.get(key)!;

@@ -135,10 +135,7 @@ export function setupVimCommands(
     const line = view.state.doc.lineAt(cursor);
     if (nonEditableLines.has(line.number)) return;
     let next = line.number + 1;
-    while (next <= view.state.doc.lines && nonEditableLines.has(next)) {
-      next++;
-    }
-    if (next > view.state.doc.lines) return;
+    if (next > view.state.doc.lines || nonEditableLines.has(next)) return;
     const nextLine = view.state.doc.line(next);
     if (isSavedRow(line.number) !== isSavedRow(next)) return;
     view.dispatch({
@@ -155,10 +152,7 @@ export function setupVimCommands(
     const line = view.state.doc.lineAt(cursor);
     if (nonEditableLines.has(line.number)) return;
     let prev = line.number - 1;
-    while (prev >= 1 && nonEditableLines.has(prev)) {
-      prev--;
-    }
-    if (prev < 1) return;
+    if (prev < 1 || nonEditableLines.has(prev)) return;
     const prevLine = view.state.doc.line(prev);
     if (isSavedRow(line.number) !== isSavedRow(prev)) return;
     view.dispatch({

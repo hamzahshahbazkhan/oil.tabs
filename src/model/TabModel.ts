@@ -158,7 +158,14 @@ async function onTabCreated(tab: browser.Tabs.Tab): Promise<void> {
     tab.windowId === undefined
   )
     return;
-  const line = tabToBufferLine(tab);
+  let currentTab = tab;
+  try {
+    // onCreated can fire before the browser has finalized group/index data.
+    currentTab = await browser.tabs.get(tab.id);
+  } catch {
+    // The tab may have been closed immediately; use the event snapshot.
+  }
+  const line = tabToBufferLine(currentTab);
   if (line.tabId === null) return;
   insertLine(currentSnapshot.lines, line);
   renumberIndices();
