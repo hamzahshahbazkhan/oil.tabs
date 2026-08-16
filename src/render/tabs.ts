@@ -15,61 +15,33 @@ function pushTabRows(
   folderById: Map<number, string>,
   tabFolderMap?: Record<number, number>,
 ): void {
-  const firstIndex = (group: BufferLine[]): number => Math.min(...group.map((tab) => tab.index));
-  const folderGroups = new Map<number | string, BufferLine[]>();
-  for (const tab of tabs) {
+  let currentFolder: number | string = "__unset";
+  let currentGroup: number | string = "__unset";
+  for (const tab of tabs.slice().sort((a, b) => a.index - b.index)) {
     const folderKey = tabFolderMap && tab.tabId !== null ? tabFolderMap[tab.tabId] ?? "__nofolder" : "__nofolder";
-    const group = folderGroups.get(folderKey);
-    if (group) {
-      group.push(tab);
-    } else {
-      folderGroups.set(folderKey, [tab]);
-    }
-  }
-
-  const folderKeys = [...folderGroups.keys()].sort((a, b) =>
-    firstIndex(folderGroups.get(a)!) - firstIndex(folderGroups.get(b)!),
-  );
-
-  for (const folderKey of folderKeys) {
-    const folderTabs = folderGroups.get(folderKey)!;
-    if (folderKey !== "__nofolder") {
-      const folderName = folderById.get(folderKey as number) ?? `Folder ${folderKey}`;
-      lines.push(Section(`Folder: ${folderName}`));
-    }
-
-    const groups = new Map<number | string, BufferLine[]>();
-    for (const tab of folderTabs) {
-      const key = tab.groupId ?? "__ungrouped";
-      const group = groups.get(key);
-      if (group) {
-        group.push(tab);
-      } else {
-        groups.set(key, [tab]);
+    if (folderKey !== currentFolder) {
+      currentFolder = folderKey;
+      currentGroup = "__unset";
+      if (folderKey !== "__nofolder") {
+        const folderName = folderById.get(folderKey as number) ?? `Folder ${folderKey}`;
+        lines.push(Section(`Folder: ${folderName}`));
       }
     }
 
-    const groupKeys = [...groups.keys()].sort((a, b) =>
-      firstIndex(groups.get(a)!) - firstIndex(groups.get(b)!),
-    );
-
-    for (const key of groupKeys) {
-      const groupTabs = groups.get(key)!;
-      if (key !== "__ungrouped") {
-        lines.push(Section(`Group: ${key}`));
-      }
-
-      for (const tab of groupTabs) {
-        lines.push(TabRow({
-          tabId: tab.tabId,
-          title: tab.title,
-          url: tab.url,
-          discarded: tab.discarded,
-          editable: tab.editable,
-          favIconUrl: tab.favIconUrl,
-        }));
-      }
+    const groupKey = tab.groupId ?? "__ungrouped";
+    if (groupKey !== currentGroup) {
+      currentGroup = groupKey;
+      if (groupKey !== "__ungrouped") lines.push(Section(`Group: ${groupKey}`));
     }
+
+    lines.push(TabRow({
+      tabId: tab.tabId,
+      title: tab.title,
+      url: tab.url,
+      discarded: tab.discarded,
+      editable: tab.editable,
+      favIconUrl: tab.favIconUrl,
+    }));
   }
 }
 
