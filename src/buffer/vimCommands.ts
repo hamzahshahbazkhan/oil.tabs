@@ -7,13 +7,19 @@ import { extractUrl, extractTitle, normalizeUrl } from "../model/Parser";
 // The package's declarations lag its runtime API (notably Ex callbacks and mapCommand).
 // Keep the compatibility boundary local instead of weakening the rest of the codebase.
 const VimCompat = Vim as any;
-const defineEx = (...args: any[]): void => {
+const registerEx = (name: string, prefix: string, callback: (...args: any[]) => void): void => {
   try {
-    VimCompat.defineEx(...args);
+    if (name.startsWith(prefix)) {
+      VimCompat.defineEx(name, prefix, callback);
+    } else {
+      VimCompat.defineEx(name, name, callback);
+      VimCompat.defineEx(prefix, prefix, callback);
+    }
   } catch (error) {
-    console.warn(`tab-oil: unable to register Ex command ${String(args[0])}`, error);
+    console.warn(`tab-oil: unable to register Ex command ${name}`, error);
   }
 };
+const defineEx = registerEx;
 
 export function setupVimCommands(
   view: EditorView,
