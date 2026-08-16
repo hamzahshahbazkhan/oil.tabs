@@ -507,7 +507,7 @@ export function setupBufferUI(): void {
           if (message.ok) {
             clearDraft();
             hideStaleBanner();
-            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, false);
+            renderSnapshot(message.snapshot, message.folders, message.tabFolderMap, message.savedItems, true);
             updateStatusBar();
           } else {
             showToast(message.error ? `tab-oil: ${message.error}` : "tab-oil: operation failed");
