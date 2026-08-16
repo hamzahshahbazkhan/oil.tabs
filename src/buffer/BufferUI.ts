@@ -29,6 +29,7 @@ let dirty = false;
 let programmaticDispatch = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastRefresh = 0;
+let largeDiffThreshold = LARGE_DIFF_THRESHOLD;
 
 // Shared state maps used by decorations
 export const idMap = new Map<number, number>();
@@ -140,7 +141,7 @@ function save(force: boolean): void {
   const ops = diff(lastSnapshot, parsed, undefined, savedUrls);
   const closeCount = ops.filter((op) => op.kind === "close").length;
 
-  if (!force && closeCount > LARGE_DIFF_THRESHOLD) {
+  if (!force && closeCount > largeDiffThreshold) {
     const ok = window.confirm(
       `This will close ${closeCount} tabs. Continue?`,
     );
@@ -296,6 +297,10 @@ function applySnapshotUpdate(snapshot: Snapshot, folders?: FolderInfo[], tabFold
 
 export function setupBufferUI(): void {
   try {
+    void browser.storage.sync.get("largeDiffConfirmThreshold").then((settings) => {
+      const configured = Number(settings.largeDiffConfirmThreshold);
+      if (Number.isFinite(configured) && configured >= 0) largeDiffThreshold = configured;
+    });
     const statusListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         if (!programmaticDispatch) {

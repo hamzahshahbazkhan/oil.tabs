@@ -42,6 +42,14 @@ async function loadSavedItems(): Promise<SavedItem[]> {
 
 const MRU_MAX = 50;
 
+function isTabId(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isTabIdList(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every(isTabId);
+}
+
 async function updateMRU(tabId: number): Promise<void> {
   const { mruTabIds } = await storageLocalGet("mruTabIds");
   let list: number[] = mruTabIds ?? [];
@@ -184,6 +192,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "SAVE": {
+        if (typeof message.text !== "string" || !sender.tab?.id) return;
         await withSaveLock(async () => {
           const snapshot = await takeSnapshot();
           const { urlMap } = formatSnapshot(snapshot);
@@ -267,6 +276,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "FOCUS_TAB": {
+        if (!isTabId(message.tabId)) return;
         await browser.tabs.update(message.tabId, { active: true });
         const tab = await browser.tabs.get(message.tabId);
         if (tab.windowId) {
@@ -276,6 +286,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "DISCARD_TABS": {
+        if (!isTabIdList(message.tabIds)) return;
         for (const tabId of message.tabIds) {
           try {
             await discardTab(tabId);
@@ -287,6 +298,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "RELOAD_TABS": {
+        if (!isTabIdList(message.tabIds)) return;
         for (const tabId of message.tabIds) {
           try {
             await browser.tabs.reload(tabId);
@@ -298,6 +310,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "TOGGLE_MUTE_TABS": {
+        if (!isTabIdList(message.tabIds)) return;
         for (const tabId of message.tabIds) {
           try {
             const tab = await browser.tabs.get(tabId);
@@ -310,6 +323,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "BOOKMARK_TABS": {
+        if (!isTabIdList(message.tabIds) || !sender.tab?.id) return;
         await withSaveLock(async () => {
           const snapshot = await takeSnapshot();
           const ops = message.tabIds.flatMap((tabId: number) => {
@@ -334,6 +348,7 @@ browser.runtime.onMessage.addListener(
       }
 
       case "OPEN_TAB":
+        if (typeof message.url !== "string" || !message.url.trim()) return;
         await browser.tabs.create({ url: message.url });
         break;
 

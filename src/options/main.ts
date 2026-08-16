@@ -32,7 +32,7 @@ function renderRows(rows: ShortcutRow[], tbody: HTMLElement): void {
     for (const val of ["focusOrOpen", "cycleNext", "cyclePrev"]) {
       const opt = document.createElement("option");
       opt.value = val;
-      opt.textContent = val === "focusOrOpen" ? "Focus or open URL" : val === "cycleNext" ? "Cycle to previous tab (MRU)" : "Cycle to next tab (MRU)";
+      opt.textContent = val === "focusOrOpen" ? "Focus or open URL" : val === "cycleNext" ? "Cycle to next tab (MRU)" : "Cycle to previous tab (MRU)";
       if (val === rows[i].action) opt.selected = true;
       actionSelect.appendChild(opt);
     }
@@ -87,10 +87,12 @@ async function init(): Promise<void> {
   });
 
   document.getElementById("saveBtn")!.addEventListener("click", async () => {
-    const valid = rows.filter((r) => r.key.trim() && (r.action !== "focusOrOpen" || r.url.trim()));
-    await saveRows(valid);
-    rows = valid;
-    renderRows(rows, tbody);
+    const invalid = rows.filter((r) => !r.key.trim() || (r.action === "focusOrOpen" && !r.url.trim()));
+    if (invalid.length > 0) {
+      status.textContent = `${invalid.length} shortcut row(s) need a key${invalid.some((r) => r.action === "focusOrOpen" && !r.url.trim()) ? " and URL" : ""}.`;
+      return;
+    }
+    await saveRows(rows);
     status.textContent = "Saved.";
     setTimeout(() => { status.textContent = ""; }, 2000);
   });

@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
 import type { Snapshot, BufferLine } from "../shared/types";
+import { MAX_FAVICON_DATA_URL_LENGTH } from "../shared/constants";
 
 const BUFFER_TAB_ID_KEY = "bufferTabId";
 const BUFFER_WINDOW_ID_KEY = "bufferWindowId";
@@ -243,6 +244,7 @@ export async function takeSnapshot(): Promise<Snapshot> {
     const favIconUrl =
       tab.favIconUrl &&
       (tab.favIconUrl.startsWith("http") || tab.favIconUrl.startsWith("data:"))
+      && (!tab.favIconUrl.startsWith("data:") || tab.favIconUrl.length <= MAX_FAVICON_DATA_URL_LENGTH)
         ? tab.favIconUrl
         : undefined;
 

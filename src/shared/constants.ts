@@ -1,1 +1,2 @@
 export const LARGE_DIFF_THRESHOLD = 10;
+export const MAX_FAVICON_DATA_URL_LENGTH = 8192;

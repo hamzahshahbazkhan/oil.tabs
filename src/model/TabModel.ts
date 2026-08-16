@@ -2,6 +2,7 @@ import browser from "webextension-polyfill";
 import type { Snapshot, BufferLine } from "../shared/types";
 import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
+import { MAX_FAVICON_DATA_URL_LENGTH } from "../shared/constants";
 import {
   getBufferTabId,
   sendMessage,
@@ -20,7 +21,7 @@ const pendingDetach = new Map<number, BufferLine>();
 
 function favIconUrl(tab: browser.Tabs.Tab): string | undefined {
   const url = tab.favIconUrl;
-  return url && (url.startsWith("http") || url.startsWith("data:"))
+  return url && (url.startsWith("http") || (url.startsWith("data:") && url.length <= MAX_FAVICON_DATA_URL_LENGTH))
     ? url
     : undefined;
 }
