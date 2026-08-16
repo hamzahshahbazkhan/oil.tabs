@@ -2,9 +2,7 @@ export type LineKind =
   | "header"
   | "section"
   | "divider"
-  | "statusLine"
-  | "tabRow"
-  | "emptyState";
+  | "tabRow";
 
 export interface RenderedLine {
   kind: LineKind;
@@ -30,10 +28,6 @@ export function Divider(): RenderedLine {
   return { kind: "divider" };
 }
 
-export function StatusLine(text: string): RenderedLine {
-  return { kind: "statusLine", text };
-}
-
 export interface TabRowInput {
   tabId: number | null;
   title: string;
@@ -53,8 +47,4 @@ export function TabRow(line: TabRowInput): RenderedLine {
     favIconUrl: line.favIconUrl,
     editable: line.editable,
   };
-}
-
-export function EmptyState(text: string): RenderedLine {
-  return { kind: "emptyState", text };
 }

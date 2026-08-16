@@ -116,8 +116,6 @@ function updateStatusBar(): void {
   const mode = vimState?.visualMode ? "VISUAL" : vimState?.insertMode ? "INSERT" : "NORMAL";
   const modeEl = document.getElementById("mode");
   if (modeEl) modeEl.textContent = mode;
-  const promptEl = document.getElementById("promptText");
-  if (promptEl) promptEl.textContent = mode === "INSERT" ? "type to edit · Esc for normal mode" : "tabs · arrange, focus, and edit";
   const el = document.getElementById("statusbar");
   if (el) {
     el.textContent = tabLines.length === 0

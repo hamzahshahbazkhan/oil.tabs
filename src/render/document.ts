@@ -29,8 +29,6 @@ function lineText(line: RenderedLine, titleWidth: number): string {
     case "section":
       return `▸ ${line.text}`;
     case "divider":
-    case "statusLine":
-    case "emptyState":
       return line.text ?? "";
     case "tabRow": {
       const identity = line.tabId === undefined ? "" : encodeTabId(line.tabId);

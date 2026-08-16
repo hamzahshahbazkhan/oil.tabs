@@ -40,7 +40,7 @@ All keybindings work in **normal mode** (press `Esc` to enter normal mode).
 | `K`              | Swap the current line with the one above (reorder tab up)                     |
 | `yy`             | Yank: copy the tab's URL to clipboard and line text to vim's default register |
 | `gr`             | Refresh: discard local edits and reload the buffer from live browser state    |
-| `/`              | Open the Telescope-style fuzzy tab picker                                    |
+| `/`              | Use the normal Vim/CodeMirror search behavior                                |
 
 ### Motion & Editing
 
@@ -109,7 +109,7 @@ Configure up to 5 keyboard shortcuts on the options page (right-click extension 
 
 The extension opens a CodeMirror 6 editor with vim keybindings (`@replit/codemirror-vim`). When you run `:w`, the buffer text is parsed, diffed against the last known browser snapshot, and the minimal set of `close`/`move`/`navigate` operations is applied to the real browser tabs.
 
-## What is NOT yet supported
+## Current limitations
 
-- Bookmark integration (type is defined but no Ex command yet)
-- Custom keymap remapping (coming in v1.0.2)
+- Custom keymap remapping is not implemented yet.
+- Firefox and browsers without tab-group/discard APIs skip those optional operations.

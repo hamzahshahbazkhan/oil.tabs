@@ -110,12 +110,6 @@ export async function storageSessionRemove(
   await browser.storage.session.remove(keys);
 }
 
-export async function storageSyncGet(
-  keys: string | string[],
-): Promise<Record<string, any>> {
-  return browser.storage.sync.get(keys);
-}
-
 // ── Window operations ───────────────────────────────────────────────────
 
 export async function getWindow(
