@@ -6,36 +6,47 @@
   <title>tab-oil options</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body {
+      :root { color-scheme: dark; --bg: #080a12; --panel: #111526; --border: rgba(126,145,196,.18); --text: #d8def8; --muted: #697398; --accent: #8aadf4; --pink: #f5bde6; }
+      body {
       margin: 0;
       padding: 24px;
-      background: #0f111a;
-      color: #c0caf5;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        background: radial-gradient(circle at 50% -20%, rgba(138,173,244,.16), transparent 45%), var(--bg);
+        color: var(--text);
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
       font-size: 13px;
     }
-    h1 { color: #7aa2f7; font-size: 16px; margin: 0 0 16px; }
+    .shell { max-width: 980px; margin: 0 auto; padding: 24px; background: rgba(17,21,35,.96); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+    h1 { color: var(--text); font-size: 17px; margin: 0; }
+    .subtitle { color: var(--muted); font-size: 11px; margin: 6px 0 22px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #1a1c2e; }
-    th { color: #565f89; font-size: 11px; text-transform: uppercase; }
-    input, select { background: #1a1c2e; color: #c0caf5; border: 1px solid #2c3052; padding: 6px 8px; font-family: inherit; font-size: 13px; width: 100%; }
-    button { background: #2f3a5e; color: #c0caf5; border: none; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 13px; }
-    button:hover { background: #3b4261; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    input, select { background: #151a2b; color: var(--text); border: 1px solid #34466f; border-radius: 5px; padding: 7px 9px; font-family: inherit; font-size: 13px; width: 100%; }
+    input:focus, select:focus { outline: 2px solid rgba(138,173,244,.25); border-color: var(--accent); }
+    button { background: #293d66; color: var(--text); border: 1px solid rgba(138,173,244,.2); border-radius: 5px; padding: 7px 14px; cursor: pointer; font-family: inherit; font-size: 12px; }
+    button:hover { background: #3d4b73; }
     .actions { margin-top: 16px; display: flex; gap: 8px; }
-    #status { color: #9ece6a; font-size: 12px; margin-top: 8px; }
+    .settings { display: flex; align-items: center; gap: 12px; margin-top: 22px; color: var(--muted); font-size: 11px; }
+    .settings input { width: 90px; }
+    #status { color: #a6da95; font-size: 12px; margin-top: 10px; min-height: 16px; }
   </style>
 </head>
 <body>
-  <h1>tab-oil — Global Shortcuts</h1>
+  <div class="shell">
+  <h1>tab-oil · Workspace settings</h1>
+  <div class="subtitle">Shape your shortcuts and keep large changes deliberate.</div>
   <table>
     <thead><tr><th>Keyboard Shortcut</th><th>Action</th><th>URL</th><th></th></tr></thead>
     <tbody id="rows"></tbody>
   </table>
+  <div class="settings"><label for="threshold">Confirm when closing more than</label><input id="threshold" type="number" min="0" step="1" value="10" /><span>tabs</span></div>
   <div class="actions">
     <button id="addBtn">+ Add</button>
     <button id="saveBtn">Save</button>
   </div>
   <div id="status"></div>
+  <div class="subtitle"><a href="chrome://extensions/shortcuts" style="color: var(--accent)">Manage browser keyboard shortcuts ↗</a></div>
+  </div>
   <script type="module" src="src/options/main.ts"></script>
 </body>
 </html>

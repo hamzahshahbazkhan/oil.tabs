@@ -66,19 +66,23 @@ function renderRows(rows: ShortcutRow[], tbody: HTMLElement): void {
   }
 }
 
-async function loadRows(): Promise<ShortcutRow[]> {
-  const { globalShortcuts } = await browser.storage.sync.get("globalShortcuts");
-  return (globalShortcuts ?? []) as ShortcutRow[];
+async function loadSettings(): Promise<{ rows: ShortcutRow[]; threshold: number }> {
+  const { globalShortcuts, largeDiffConfirmThreshold } = await browser.storage.sync.get(["globalShortcuts", "largeDiffConfirmThreshold"]);
+  const threshold = Number(largeDiffConfirmThreshold);
+  return { rows: (globalShortcuts ?? []) as ShortcutRow[], threshold: Number.isInteger(threshold) && threshold >= 0 ? threshold : 10 };
 }
 
-async function saveRows(rows: ShortcutRow[]): Promise<void> {
-  await browser.storage.sync.set({ globalShortcuts: rows });
+async function saveSettings(rows: ShortcutRow[], threshold: number): Promise<void> {
+  await browser.storage.sync.set({ globalShortcuts: rows, largeDiffConfirmThreshold: threshold });
 }
 
 async function init(): Promise<void> {
   const tbody = document.getElementById("rows")!;
   const status = document.getElementById("status")!;
-  let rows = await loadRows();
+  const settings = await loadSettings();
+  let rows = settings.rows;
+  const thresholdInput = document.getElementById("threshold") as HTMLInputElement;
+  thresholdInput.value = String(settings.threshold);
   renderRows(rows, tbody);
 
   document.getElementById("addBtn")!.addEventListener("click", () => {
@@ -92,7 +96,12 @@ async function init(): Promise<void> {
       status.textContent = `${invalid.length} shortcut row(s) need a key${invalid.some((r) => r.action === "focusOrOpen" && !r.url.trim()) ? " and URL" : ""}.`;
       return;
     }
-    await saveRows(rows);
+    const threshold = Number(thresholdInput.value);
+    if (!Number.isInteger(threshold) || threshold < 0) {
+      status.textContent = "Confirmation threshold must be a non-negative whole number.";
+      return;
+    }
+    await saveSettings(rows, threshold);
     status.textContent = "Saved.";
     setTimeout(() => { status.textContent = ""; }, 2000);
   });
