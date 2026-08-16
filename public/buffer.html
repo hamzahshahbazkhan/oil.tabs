@@ -129,33 +129,6 @@
         transition: opacity .18s ease, transform .18s ease;
       }
       #toast.visible { opacity: 1; transform: translate(-50%, 0); }
-      #searchOverlay {
-        position: fixed;
-        inset: 0;
-        z-index: 150;
-        display: none;
-        align-items: flex-start;
-        justify-content: center;
-        padding-top: min(18vh, 150px);
-        background: rgba(4, 6, 12, .82);
-      }
-      #searchOverlay.open { display: flex; }
-      #searchCard {
-        width: min(720px, calc(100vw - 32px));
-        overflow: hidden;
-        background: #111526;
-        border: 1px solid var(--border);
-      }
-      #searchInputRow { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid rgba(126,145,196,.16); }
-      #searchInputGlyph { color: #f5bde6; font-size: 18px; }
-      #searchInput { flex: 1; min-width: 0; color: #d8def8; background: transparent; border: 0; outline: 0; font: 14px inherit; }
-      #searchInput::placeholder { color: #697398; }
-      #searchResults { max-height: min(440px, 52vh); overflow: auto; padding: 6px; }
-      .searchResult { display: flex; gap: 10px; padding: 9px 10px; color: #9aa6cf; font-size: 12px; }
-      .searchResult.selected { color: #d8def8; background: #26324f; }
-      .searchResultIndex { width: 18px; color: #697398; text-align: right; }
-      .searchResultText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      #searchHint { padding: 9px 16px; color: #697398; border-top: 1px solid rgba(126,145,196,.12); font-size: 10px; }
       #closeBtn {
         position: fixed;
         top: 12px;
@@ -201,13 +174,6 @@
       <footer id="footer"><div id="statusbar">Loading workspace…</div><div id="footerHints">Enter focus · :w save · gr refresh · ? help</div></footer>
     </main>
     <div id="toast" role="status" aria-live="polite"></div>
-    <div id="searchOverlay" aria-label="Search tabs">
-      <div id="searchCard">
-        <div id="searchInputRow"><span id="searchInputGlyph">❯</span><input id="searchInput" autocomplete="off" placeholder="Search tabs by title or URL…" /></div>
-        <div id="searchResults"></div>
-        <div id="searchHint">↑↓ or Ctrl-n/p navigate · Enter jump · Esc close</div>
-      </div>
-    </div>
     <button id="closeBtn" aria-label="Close buffer">&times;</button>
     <script type="module" src="buffer.js"></script>
   </body>
