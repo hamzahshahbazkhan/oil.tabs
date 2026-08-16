@@ -429,8 +429,8 @@ browser.runtime.onMessage.addListener(
         if (!isTabIdList(message.tabIds)) return;
         const keep = new Set(message.tabIds);
         const bufferTabId = await getBufferTabId();
-        const active = await browser.tabs.query({ active: true, currentWindow: true });
-        const windowId = active[0]?.windowId;
+        const selectedTab = await browser.tabs.get(message.tabIds[0]).catch(() => undefined);
+        const windowId = selectedTab?.windowId;
         if (windowId === undefined) return;
         const tabs = await browser.tabs.query({ windowId });
         for (const tab of tabs) {
