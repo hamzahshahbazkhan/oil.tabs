@@ -17,8 +17,6 @@ import { bufferDarkTheme } from "./theme";
 
 declare const __BUILD_HASH__: string;
 
-const REFRESH_COOLDOWN = 2000;
-
 let view: EditorView;
 let lastSnapshot: Snapshot | null = null;
 let lastUrlMap = new Map<string, number[]>();
@@ -28,7 +26,6 @@ let lastSavedItems: SavedItem[] = [];
 let dirty = false;
 let programmaticDispatch = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-let lastRefresh = 0;
 let largeDiffThreshold = LARGE_DIFF_THRESHOLD;
 
 // Shared state maps used by decorations
@@ -425,17 +422,6 @@ export function setupBufferUI(): void {
             updateStatusBar();
           } else {
             alert(`tab-oil error: ${message.error}`);
-          }
-          break;
-        case "STALE_WARNING":
-          if (!dirty) {
-            const now = Date.now();
-            if (now - lastRefresh > REFRESH_COOLDOWN) {
-              lastRefresh = now;
-              browser.runtime.sendMessage({ type: "REQUEST_SNAPSHOT" });
-            }
-          } else {
-            showStaleBanner();
           }
           break;
         case "SNAPSHOT_UPDATED":

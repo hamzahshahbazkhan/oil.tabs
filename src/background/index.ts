@@ -11,8 +11,6 @@ import type { BgToBuffer, FolderInfo } from "../shared/messages";
 import type { SavedItem } from "../shared/storageSchema";
 
 let syncInited = false;
-let currentUrlMap: Map<string, number[]> | null = null;
-
 let saveLock = Promise.resolve();
 
 async function withSaveLock<T>(fn: () => Promise<T>): Promise<T> {
@@ -98,16 +96,6 @@ async function focusOrOpen(url: string): Promise<void> {
   }
 }
 
-async function sendStaleWarning(): Promise<void> {
-  const tabId = await getBufferTabId();
-  if (tabId === undefined) return;
-  try {
-    await browser.tabs.sendMessage(tabId, { type: "STALE_WARNING" });
-  } catch {
-    // Buffer tab may not be open
-  }
-}
-
 browser.tabs.onActivated.addListener((info) => {
   updateMRU(info.tabId);
 });
@@ -129,8 +117,6 @@ browser.tabs.onRemoved.addListener(async (tabId) => {
 browser.action.onClicked.addListener(async () => {
   await openOrFocusBufferTab();
   const snapshot = await takeSnapshot();
-  const { urlMap } = formatSnapshot(snapshot);
-  currentUrlMap = urlMap;
   if (!syncInited) {
     await initTabModel(snapshot);
     syncInited = true;
@@ -143,8 +129,6 @@ browser.commands.onCommand.addListener(async (command) => {
   if (command === "toggle-tab-buffer") {
     await openOrFocusBufferTab();
     const snapshot = await takeSnapshot();
-    const { urlMap } = formatSnapshot(snapshot);
-    currentUrlMap = urlMap;
     if (!syncInited) {
       await initTabModel(snapshot);
       syncInited = true;
@@ -174,10 +158,8 @@ browser.runtime.onMessage.addListener(
       case "REQUEST_SNAPSHOT": {
         await refreshBufferTabId();
         const snapshot = syncInited ? getSnapshot() : await takeSnapshot();
-        const { urlMap } = formatSnapshot(snapshot);
         const folderData = await loadFolderData();
         const savedItems = await loadSavedItems();
-        currentUrlMap = urlMap;
         if (!syncInited) {
           await initTabModel(snapshot);
           syncInited = true;
@@ -201,24 +183,6 @@ browser.runtime.onMessage.addListener(
           const storedFolderData = await loadFolderData();
           const folderIds = new Map(storedFolderData.folders.map((folder) => [folder.name, folder.id]));
           const parsed = parse(message.text, urlMap, folderIds);
-
-          if (currentUrlMap) {
-            const existingIds = new Set(snapshot.lines.map(l => l.tabId));
-            const assignedIds = new Set<number>();
-            for (const p of parsed) {
-              if (p.tabId !== null) assignedIds.add(p.tabId);
-            }
-            for (const p of parsed) {
-              if (p.tabId === null) {
-                const prevIds = (currentUrlMap.get(p.url) ?? []).slice().sort((a, b) => a - b);
-                const prevId = prevIds.find(id => existingIds.has(id) && !assignedIds.has(id));
-                if (prevId !== undefined) {
-                  p.tabId = prevId;
-                  assignedIds.add(prevId);
-                }
-              }
-            }
-          }
 
           const storedData = await storageLocalGet(["folders", "tabFolderMap", "savedForLater"]);
           const storedFolders = (storedData.folders ?? []) as FolderInfo[];
@@ -244,8 +208,6 @@ browser.runtime.onMessage.addListener(
             // Buffer tab may have closed
           }
           const freshSnapshot = await takeSnapshot();
-          const { urlMap: freshUrlMap } = formatSnapshot(freshSnapshot);
-          currentUrlMap = freshUrlMap;
 
           const freshFolders: FolderInfo[] = [];
           const freshTabFolderMap: Record<number, number> = {};
