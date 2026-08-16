@@ -26,6 +26,7 @@ let lastFolders: FolderInfo[] = [];
 let lastTabFolderMap: Record<number, number> = {};
 let lastSavedItems: SavedItem[] = [];
 let dirty = false;
+let programmaticDispatch = false;
 let statusDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let lastRefresh = 0;
 
@@ -36,6 +37,47 @@ export const faviconMap = new Map<number, string>();
 export const lineUrlMap = new Map<number, string>();
 export const lineKinds = new Map<number, LineKind>();
 export let titleColumn = 0;
+
+function remapLocalLineState(oldText: string, newText: string): void {
+  const oldLines = oldText.split("\n");
+  const newLines = newText.split("\n");
+  const oldByText = new Map<string, number[]>();
+  for (let i = 0; i < oldLines.length; i++) {
+    const lines = oldByText.get(oldLines[i]) ?? [];
+    lines.push(i + 1);
+    oldByText.set(oldLines[i], lines);
+  }
+
+  const oldIdMap = new Map(idMap);
+  const oldNonEditable = new Set(nonEditableLines);
+  const oldFavicons = new Map(faviconMap);
+  const oldUrls = new Map(lineUrlMap);
+  const oldKinds = new Map(lineKinds);
+  const usedOldLines = new Set<number>();
+  idMap.clear();
+  nonEditableLines.clear();
+  faviconMap.clear();
+  lineUrlMap.clear();
+  lineKinds.clear();
+
+  for (let newLine = 1; newLine <= newLines.length; newLine++) {
+    const candidates = oldByText.get(newLines[newLine - 1]) ?? [];
+    const exact = candidates.find((line) => !usedOldLines.has(line));
+    const oldLine = exact ?? (newLine <= oldLines.length ? newLine : undefined);
+    if (oldLine === undefined || usedOldLines.has(oldLine)) continue;
+    usedOldLines.add(oldLine);
+
+    const tabId = oldIdMap.get(oldLine);
+    if (tabId !== undefined) idMap.set(newLine, tabId);
+    if (oldNonEditable.has(oldLine)) nonEditableLines.add(newLine);
+    const favicon = oldFavicons.get(oldLine);
+    if (favicon !== undefined) faviconMap.set(newLine, favicon);
+    const url = oldUrls.get(oldLine);
+    if (url !== undefined) lineUrlMap.set(newLine, url);
+    const kind = oldKinds.get(oldLine);
+    if (kind !== undefined) lineKinds.set(newLine, kind);
+  }
+}
 
 function updateStatusBar(): void {
   const text = view.state.doc.toString();
@@ -136,6 +178,9 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   const f = folders ?? [];
   const tfm = tabFolderMap ?? {};
   const si = savedItems ?? [];
+  const prevCursor = view.state.selection.main.head;
+  const prevLine = view.state.doc.lineAt(prevCursor);
+  const prevTabId = idMap.get(prevLine.number);
   const newData = formatSnapshot(snapshot, f, tfm, si);
   updateMaps(snapshot, f, tfm, si, newData);
 
@@ -145,17 +190,18 @@ function renderSnapshot(snapshot: Snapshot, folders?: FolderInfo[], tabFolderMap
   const text = newData.text;
   if (text === view.state.doc.toString()) return;
 
-  const prevCursor = view.state.selection.main.head;
-  const prevLine = view.state.doc.lineAt(prevCursor);
-  const prevTabId = idMap.get(prevLine.number);
-
-  view.dispatch({
-    changes: {
-      from: 0,
-      to: view.state.doc.length,
-      insert: text,
-    },
-  });
+  programmaticDispatch = true;
+  try {
+    view.dispatch({
+      changes: {
+        from: 0,
+        to: view.state.doc.length,
+        insert: text,
+      },
+    });
+  } finally {
+    programmaticDispatch = false;
+  }
 
   let newPos: number;
   if (prevTabId !== undefined) {
@@ -222,7 +268,12 @@ function applySnapshotUpdate(snapshot: Snapshot, folders?: FolderInfo[], tabFold
   const to = oldEnd >= 0 && oldEnd < view.state.doc.lines ? view.state.doc.line(oldEnd + 1).to : view.state.doc.length;
   const insert = newLines.slice(startLine, newEnd + 1).join("\n");
 
-  view.dispatch({ changes: { from, to, insert } });
+  programmaticDispatch = true;
+  try {
+    view.dispatch({ changes: { from, to, insert } });
+  } finally {
+    programmaticDispatch = false;
+  }
 
   if (cursorTabId !== undefined) {
     for (let i = 1; i <= view.state.doc.lines; i++) {
@@ -244,7 +295,10 @@ export function setupBufferUI(): void {
   try {
     const statusListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
-        dirty = true;
+        if (!programmaticDispatch) {
+          remapLocalLineState(update.startState.doc.toString(), update.state.doc.toString());
+          dirty = true;
+        }
         scheduleStatusUpdate();
       }
     });
