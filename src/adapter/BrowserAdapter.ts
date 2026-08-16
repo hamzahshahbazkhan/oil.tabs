@@ -260,6 +260,7 @@ export async function takeSnapshot(): Promise<Snapshot> {
       groupId:
         tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
       favIconUrl,
+      incognito: tab.incognito ?? false,
     });
   }
 
@@ -267,6 +268,18 @@ export async function takeSnapshot(): Promise<Snapshot> {
     if (a.windowId !== b.windowId) return a.windowId - b.windowId;
     return a.index - b.index;
   });
+
+  const liveTabIds = new Set(lines.map((line) => line.tabId));
+  const stored = await storageLocalGet("tabFolderMap");
+  const folderMap: Record<number, number> = stored.tabFolderMap ?? {};
+  let folderMapChanged = false;
+  for (const key of Object.keys(folderMap)) {
+    if (!liveTabIds.has(Number(key))) {
+      delete folderMap[Number(key)];
+      folderMapChanged = true;
+    }
+  }
+  if (folderMapChanged) await storageLocalSet({ tabFolderMap: folderMap });
 
   return { takenAt: Date.now(), lines };
 }

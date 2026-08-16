@@ -46,6 +46,7 @@ function tabToBufferLine(tab: browser.Tabs.Tab): BufferLine {
     ),
     groupId: tab.groupId !== undefined && tab.groupId > -1 ? tab.groupId : null,
     favIconUrl: favIconUrl(tab),
+    incognito: tab.incognito ?? false,
   };
 }
 

@@ -62,6 +62,13 @@ function validateOps(ops: Operation[], snapshot: Snapshot): string | null {
     if (op.kind === "move" && !snapWindowIds.has(op.windowId)) {
       return `Target window ${op.windowId} does not exist in the snapshot.`;
     }
+    if (op.kind === "move") {
+      const source = snapshot.lines.find((line) => line.tabId === op.tabId);
+      const targetWindowIncognito = snapshot.lines.find((line) => line.windowId === op.windowId)?.incognito;
+      if (source?.incognito !== undefined && targetWindowIncognito !== undefined && source.incognito !== targetWindowIncognito) {
+        return `Cannot move tab ${op.tabId} between incognito and regular windows.`;
+      }
+    }
   }
 
   return null;

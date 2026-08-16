@@ -201,4 +201,15 @@ describe("execute", () => {
     const result = await execute(ops, s);
     expect(result).toEqual({ ok: true });
   });
+
+  it("rejects moves between incognito and regular windows", async () => {
+    const s = snapshot([
+      { tabId: 1, windowId: 1 },
+      { tabId: 2, windowId: 2 },
+    ]);
+    s.lines[0].incognito = false;
+    s.lines[1].incognito = true;
+    const result = await execute([{ kind: "move", tabId: 1, windowId: 2, index: 0 }], s);
+    expect(result).toEqual({ ok: false, error: "Cannot move tab 1 between incognito and regular windows." });
+  });
 });

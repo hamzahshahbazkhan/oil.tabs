@@ -9,6 +9,7 @@ export interface BufferLine {
   editable: boolean;
   groupId: number | null;
   favIconUrl?: string;
+  incognito?: boolean;
 }
 
 export type Operation =
